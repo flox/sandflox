@@ -1,0 +1,175 @@
+schema-version = "1.10.0"
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  sandflox — Immutable Agent Sandbox                            ║
+# ║                                                                ║
+# ║  The agent gets the plastic shovel and pail.                   ║
+# ║  The bulldozer stays in the shed.                              ║
+# ║                                                                ║
+# ║  Layer 1 (hook):  Wipe system PATH → only $FLOX_ENV/bin        ║
+# ║  Layer 2 (profile): requisites.txt binary-level filter         ║
+# ║  Layer 3 (profile): Shell function armor on pkg managers       ║
+# ║  Layer 4 (profile): Env var breadcrumb cleanup                 ║
+# ║  Layer 5: flox containerize (optional nuclear option)          ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+
+## Packages — the package-level whitelist.
+## Only these packages' binaries exist in $FLOX_ENV/bin.
+[install]
+bash.pkg-path = "bash"
+python3.pkg-path = "python3"
+curl.pkg-path = "curl"
+jq.pkg-path = "jq"
+git.pkg-path = "git"
+coreutils.pkg-path = "coreutils"
+gnugrep.pkg-path = "gnugrep"
+gnused.pkg-path = "gnused"
+gawk.pkg-path = "gawk"
+findutils.pkg-path = "findutils"
+diffutils.pkg-path = "diffutils"
+
+
+[vars]
+SANDFLOX_ENABLED = "1"
+SANDFLOX_MODE = "enforced"
+
+
+[hook]
+on-activate = '''
+  # ── Layer 1: Wipe system PATH ────────────────────────────────
+  # After this hook, Flox prepends $FLOX_ENV/bin to PATH.
+  # By clearing PATH here, the final result is ONLY $FLOX_ENV/bin.
+  # No system flox, nix, brew, pip, npm, docker, etc.
+  #
+  # We can still use commands during the hook because it runs
+  # with the original PATH. The wipe only takes effect afterward.
+
+  # Stage requisites.txt into the cache so the profile can find it
+  # without needing FLOX_ENV_PROJECT (which we're about to scrub).
+  _sfx_stage="${FLOX_ENV_CACHE}/sandflox"
+  mkdir -p "$_sfx_stage"
+  if [ -f "${FLOX_ENV_PROJECT}/requisites.txt" ]; then
+    cp "${FLOX_ENV_PROJECT}/requisites.txt" "$_sfx_stage/requisites.txt"
+  fi
+
+  # Replace system PATH with ONLY Flox-installed packages.
+  # This is the package-level whitelist — no system flox, nix,
+  # brew, pip, npm, docker, etc. Only what's in [install].
+  export PATH="$FLOX_ENV/bin"
+
+  # Neutralize Python's ensurepip so agents can't bootstrap pip.
+  # Also block venv creation (which bundles pip).
+  export PYTHON_NOPIP=1
+  _sfx_pyver=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "3.13")
+  _sfx_ensurepip="$FLOX_ENV/lib/python${_sfx_pyver}/ensurepip"
+  if [ -d "$_sfx_ensurepip" ]; then
+    export PYTHONDONTWRITEBYTECODE=1
+    # Create a site-customize that neuters ensurepip at import time
+    _sfx_sitecust="${FLOX_ENV_CACHE}/sandflox-python"
+    mkdir -p "$_sfx_sitecust"
+    cat > "$_sfx_sitecust/usercustomize.py" << 'PYEOF'
+import importlib, types
+_blocked = types.ModuleType("ensurepip")
+_blocked.__doc__ = "Blocked by sandflox"
+_blocked._ENSUREPIP_DISABLED = True
+def _noop(*a,**k): raise SystemExit("[sandflox] BLOCKED: ensurepip is disabled in this sandbox")
+_blocked.bootstrap = _noop
+_blocked.version = _noop
+import sys
+sys.modules["ensurepip"] = _blocked
+PYEOF
+    export PYTHONUSERBASE="$_sfx_sitecust"
+    export ENABLE_USER_SITE=1
+    export PYTHONPATH="${_sfx_sitecust}:${PYTHONPATH:-}"
+  fi
+
+  # Breadcrumb cleanup — scrub env vars an agent could use to escape
+  unset FLOX_ENV_PROJECT FLOX_ENV_DIRS FLOX_PATH_PATCHED
+'''
+
+
+[profile]
+common = '''
+  # ── Layer 2: Binary-level filtering (requisites.txt) ──────────
+  # The hook gave us $FLOX_ENV/bin (package-level whitelist).
+  # Now filter down to individual binaries via requisites.txt.
+  # This is the "plastic shovel and pail" granularity.
+
+  _sfx_req="${FLOX_ENV_CACHE}/sandflox/requisites.txt"
+
+  if [ -f "$_sfx_req" ]; then
+    _sfx_bin="${FLOX_ENV_CACHE}/sandflox/bin"
+    rm -rf "$_sfx_bin"
+    mkdir -p "$_sfx_bin"
+    _sfx_count=0
+
+    while IFS= read -r _sfx_line || [ -n "$_sfx_line" ]; do
+      case "$_sfx_line" in \#*|"") continue ;; esac
+      _sfx_tool="${_sfx_line%% *}"
+      _sfx_tool="${_sfx_tool%%	*}"
+      [ -z "$_sfx_tool" ] && continue
+      if [ -x "${FLOX_ENV}/bin/$_sfx_tool" ]; then
+        ln -sf "${FLOX_ENV}/bin/$_sfx_tool" "${_sfx_bin}/$_sfx_tool"
+        _sfx_count=$((_sfx_count + 1))
+      fi
+    done < "$_sfx_req"
+
+    export PATH="$_sfx_bin"
+    echo "[sandflox] Sandbox active: $_sfx_count tools from requisites.txt"
+  else
+    echo "[sandflox] Sandbox active: $(ls "$FLOX_ENV/bin" | wc -l | tr -d " ") tools (package-level, no requisites.txt)"
+  fi
+
+  # ── Layer 3: Shell Function Armor ─────────────────────────────
+  # Defense in depth. Catches agents calling blocked tools by name,
+  # even via absolute paths or after unsetting PATH.
+
+  _sandflox_blocked() {
+    echo "[sandflox] BLOCKED: $1 is not available. Environment is immutable." >&2
+    return 126
+  }
+
+  flox()      { _sandflox_blocked flox; }
+  nix()       { _sandflox_blocked nix; }
+  nix-env()   { _sandflox_blocked nix-env; }
+  nix-store() { _sandflox_blocked nix-store; }
+  nix-shell() { _sandflox_blocked nix-shell; }
+  nix-build() { _sandflox_blocked nix-build; }
+  apt()       { _sandflox_blocked apt; }
+  apt-get()   { _sandflox_blocked apt-get; }
+  yum()       { _sandflox_blocked yum; }
+  dnf()       { _sandflox_blocked dnf; }
+  brew()      { _sandflox_blocked brew; }
+  snap()      { _sandflox_blocked snap; }
+  flatpak()   { _sandflox_blocked flatpak; }
+  pip()       { _sandflox_blocked pip; }
+  pip3()      { _sandflox_blocked pip3; }
+  npm()       { _sandflox_blocked npm; }
+  npx()       { _sandflox_blocked npx; }
+  yarn()      { _sandflox_blocked yarn; }
+  pnpm()      { _sandflox_blocked pnpm; }
+  cargo()     { _sandflox_blocked cargo; }
+  go()        { _sandflox_blocked go; }
+  gem()       { _sandflox_blocked gem; }
+  composer()  { _sandflox_blocked composer; }
+  uv()        { _sandflox_blocked uv; }
+  docker()    { _sandflox_blocked docker; }
+  podman()    { _sandflox_blocked podman; }
+
+  export -f _sandflox_blocked \
+    flox nix nix-env nix-store nix-shell nix-build \
+    apt apt-get yum dnf brew snap flatpak \
+    pip pip3 npm npx yarn pnpm cargo go gem composer uv \
+    docker podman
+
+  # ── Layer 4: Breadcrumb Cleanup ───────────────────────────────
+  unset FLOX_ENV_PROJECT FLOX_ENV_DIRS FLOX_PATH_PATCHED
+  unset _sfx_bin _sfx_req _sfx_count _sfx_line _sfx_tool
+'''
+
+
+[services]
+[include]
+[build]
+[options]
