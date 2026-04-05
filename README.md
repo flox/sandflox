@@ -152,7 +152,7 @@ sandflox is shell-level enforcement, not kernel-level isolation. A sufficiently 
 - **Use Python to call subprocess with an absolute path** — `subprocess.call(["/nix/store/.../bin/flox", "install", "foo"])`. Requires knowing the store path.
 - **Download and execute arbitrary code** — `curl | python3`. Mitigated by removing `curl` from `requisites.txt` if this is a concern.
 
-For kernel-level isolation on Linux, see [flox-bwrap](https://github.com/devusb/flox-bwrap) which uses bubblewrap namespaces to make unmounted paths literally invisible to the agent.
+For kernel-level isolation on Linux, see [flox-bwrap](https://github.com/8BitTacoSupreme/flox-bwrap) which uses bubblewrap namespaces to make unmounted paths literally invisible to the agent.
 
 ## sandflox vs flox-bwrap
 
