@@ -14,8 +14,9 @@ echo ""
 
 echo "[Layer 1] PATH restriction — blocked tools"
 for cmd in flox nix nix-env nix-store brew pip pip3 npm docker podman; do
-  if command -v "$cmd" >/dev/null 2>&1; then
-    bad "$cmd found at $(command -v $cmd)"
+  # Use type -P to check PATH only (function armor defines these as functions)
+  if type -P "$cmd" >/dev/null 2>&1; then
+    bad "$cmd binary found in PATH"
   else
     ok "$cmd not in PATH"
   fi
@@ -23,13 +24,21 @@ done
 echo ""
 
 echo "[Layer 1] PATH restriction — allowed tools"
-for cmd in python3 git curl jq grep sed awk bash ls cat echo; do
+for cmd in python3 git jq grep sed awk bash ls cat echo; do
   if command -v "$cmd" >/dev/null 2>&1; then
     ok "$cmd available"
   else
     bad "$cmd not found"
   fi
 done
+# curl is conditionally removed when network=blocked
+if command -v curl >/dev/null 2>&1; then
+  ok "curl available"
+elif [ -f "${FLOX_ENV_CACHE:-}/sandflox/net-blocked.flag" ]; then
+  ok "curl removed (network=blocked)"
+else
+  bad "curl not found"
+fi
 echo ""
 
 echo "[Layer 2] Function armor (interactive shells only)"

@@ -8,54 +8,142 @@ The agent gets the plastic shovel and pail. The bulldozer stays in the shed.
 
 AI coding agents (Claude Code, Cursor, Copilot, etc.) can run shell commands. Even when prompted not to, they can `flox install`, `pip install`, `npm install`, or `brew install` — mutating the environment out from under you. Prompting isn't security. You need technical enforcement.
 
-## How it works
+## Architecture
 
-sandflox uses Flox's activation hooks and profile scripts to build a layered defense that makes the environment genuinely immutable from the agent's perspective.
+sandflox v2 provides two enforcement tiers that compose:
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  Layer 1 (hook)     PATH = $FLOX_ENV/bin only       │  ← blocks ALL system binaries
-│  Layer 2 (profile)  requisites.txt binary filter    │  ← narrows to specific tools
-│  Layer 3 (profile)  shell function armor (27 cmds)  │  ← defense in depth
-│  Layer 4 (hook+profile)  env var breadcrumb scrub   │  ← removes escape routes
-│  Layer 5 (optional) flox containerize               │  ← nuclear option
-└─────────────────────────────────────────────────────┘
+policy.toml (declarative, version-controlled, team-sharable via FloxHub)
+    │
+    ▼
+./sandflox (wrapper script)
+    ├── macOS: policy.toml → .sb profile → sandbox-exec
+    └── Linux: policy.toml → bwrap flags → bwrap
+    │
+    ▼
+flox activate (inside the sandbox)
+    → hook:    PATH wipe, breadcrumb cleanup, python ensurepip block
+    → profile: binary whitelist, function armor, fs-filter
+
+┌──────────────────────────────────────────────────────────────────┐
+│  Tier 1 — Kernel (sandbox-exec / bwrap)                         │
+│  Blocks: redirects, absolute-path binaries, raw socket I/O      │
+│  Enforcement: filesystem writes, network, denied paths           │
+├──────────────────────────────────────────────────────────────────┤
+│  Tier 2 — Shell (flox activate hooks + profile)                  │
+│  Blocks: package managers, escape vectors, breadcrumb discovery  │
+│  Enforcement: PATH wipe, requisites filter, function armor       │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**Two levels of granularity:**
-
-- **`[install]` in manifest.toml** — package-level whitelist (what Flox packages exist)
-- **`requisites.txt`** — binary-level whitelist (which executables the agent can actually run)
+| Tier | macOS | Linux | Intercepts redirects? | Intercepts abs paths? |
+|------|-------|-------|----------------------|----------------------|
+| Shell (`flox activate`) | PATH + functions | PATH + functions | No | No |
+| Kernel (`./sandflox`) | sandbox-exec SBPL | bwrap namespaces | Yes | Yes |
 
 ## Quick start
 
+### Hardened activation (recommended for agent sessions)
+
 ```bash
-# Clone and activate
 git clone https://github.com/8BitTacoSupreme/sandflox.git
 cd sandflox
-flox activate
+chmod +x sandflox
 
-# In interactive mode, you'll see:
-# [sandflox] Sandbox active: 54 tools from requisites.txt
+# Interactive shell with kernel enforcement
+./sandflox
 
-# Verify it works
-flox install something    # → BLOCKED
-pip install requests      # → BLOCKED
-python3 -c "print('hi')" # → works
-curl https://example.com  # → works
-git status                # → works
+# Run a command
+./sandflox -- bash agent-script.sh
+
+# Override profile
+SANDFLOX_PROFILE=minimal ./sandflox -- python3 agent.py
 ```
 
-For non-interactive use (CI, scripted agents):
+### Shell-only activation (no kernel enforcement)
 
 ```bash
-flox activate -- bash my-agent-script.sh
-# Layer 1 active: PATH locked to $FLOX_ENV/bin only
+flox activate
+# [sandflox] Sandbox active: 55 tools (profile: default)
 ```
 
-## What gets blocked
+### Verification
 
-Every package manager and installer the agent might reach for:
+```bash
+# Full test suite (kernel + shell)
+./sandflox -- bash test-policy.sh    # 29 passed, 0 failed
+
+# Legacy test suite
+./sandflox -- bash test-sandbox.sh   # 35 passed, 0 failed
+```
+
+## `policy.toml` — Declarative Policy
+
+The policy file controls network access, filesystem restrictions, and profile selection.
+
+```toml
+[meta]
+version = "2"
+profile = "default"              # selects from [profiles.*]
+
+[network]
+mode = "blocked"                 # "unrestricted" | "blocked"
+allow-localhost = true           # allow loopback even when blocked
+
+[filesystem]
+mode = "workspace"               # "permissive" | "workspace" | "strict"
+writable = [".", "/tmp"]
+read-only = [".flox/env/", ".git/", ".env", "policy.toml", "requisites.txt"]
+denied = ["~/.ssh/", "~/.gnupg/", "~/.aws/", "~/.config/gcloud/", "~/.config/gh/"]
+
+[profiles.minimal]
+requisites = "requisites-minimal.txt"
+network = "blocked"
+filesystem = "strict"
+
+[profiles.default]
+requisites = "requisites.txt"
+network = "blocked"
+filesystem = "workspace"
+
+[profiles.full]
+requisites = "requisites-full.txt"
+network = "unrestricted"
+filesystem = "permissive"
+```
+
+### Profile resolution
+
+1. `$SANDFLOX_PROFILE` env var (highest priority)
+2. `policy.toml [meta] profile`
+3. `"default"`
+
+### Network modes
+
+| Mode | Behavior |
+|------|----------|
+| `blocked` | All TCP/UDP denied at kernel level. Unix sockets allowed (nix daemon). Localhost allowed if `allow-localhost = true`. curl removed from PATH. |
+| `unrestricted` | No network restrictions. |
+
+Domain-level filtering requires a proxy and is out of scope. Shell-level curl wrappers remain as defense-in-depth.
+
+### Filesystem modes
+
+| Mode | Behavior |
+|------|----------|
+| `workspace` | Writes allowed to project dir + /tmp. Read-only overrides for .git, .flox/env, etc. Denied paths blocked at kernel level. |
+| `strict` | No user-writable paths. Only temp dirs for shell operation. |
+| `permissive` | No write restrictions. |
+
+### Requisites profiles
+
+| Profile | Tools | Use case |
+|---------|-------|----------|
+| `requisites-minimal.txt` | ~28 | Read-only inspection. No cp/mv/rm/curl/git. Untrusted agents. |
+| `requisites.txt` | ~55 | Default. Shell utils, text processing, python3, jq, curl, git. |
+| `requisites-full.txt` | ~54+ | All non-manager binaries. Trusted agents. |
+
+## What gets blocked
 
 | Category | Blocked commands |
 |----------|-----------------|
@@ -63,24 +151,14 @@ Every package manager and installer the agent might reach for:
 | Language package managers | `pip`, `pip3`, `npm`, `npx`, `yarn`, `pnpm`, `cargo`, `go`, `gem`, `composer`, `uv` |
 | Container tools | `docker`, `podman` |
 | Python escape vectors | `python3 -m pip`, `python3 -m ensurepip`, `python3 -m venv` |
-
-## What the agent gets
-
-Edit `requisites.txt` to control exactly which binaries are available. The default set:
-
-- **Shell utilities** — bash, cat, ls, cp, mv, mkdir, rm, chmod, etc.
-- **Text processing** — grep, sed, awk, cut, diff, etc.
-- **Scripting** — python3, jq
-- **Network** — curl (read-only fetching)
-- **Version control** — git
-- **File inspection** — stat, du, sha256sum, file
+| Filesystem (kernel) | Writes outside workspace, reads to `~/.ssh`, `~/.gnupg`, `~/.aws` |
+| Network (kernel) | All outbound TCP/UDP when `network = "blocked"` |
 
 ## Customization
 
 ### Add a tool
 
 Add the binary name to `requisites.txt`:
-
 ```
 # --- My additions ---
 wget
@@ -88,7 +166,6 @@ tree
 ```
 
 If the binary comes from a package not yet installed, add it to `[install]` in the manifest:
-
 ```bash
 # Outside the sandbox (before activating):
 flox edit
@@ -98,76 +175,42 @@ flox edit
 ### Remove a tool
 
 Delete or comment out the line in `requisites.txt`:
-
 ```
 # curl    ← commented out, agent can no longer fetch URLs
 ```
 
-### Package-level only (no requisites.txt)
+### Tune the policy
 
-Delete `requisites.txt` entirely. The sandbox will fall back to exposing all binaries from `[install]` packages (~145 tools), but still block all system binaries (flox, nix, brew, etc.).
+Edit `policy.toml` to change network mode, filesystem mode, or denied paths. Changes take effect on next `./sandflox` invocation.
 
-## How the layers work
+## How the enforcement layers work
 
-### Layer 1: PATH wipe (hook)
+### Kernel tier (./sandflox wrapper)
 
-The activation hook replaces the system PATH with only `$FLOX_ENV/bin` — the directory containing binaries from Flox-installed packages. This runs in both interactive and `-- CMD` modes. The system's `flox`, `nix`, `brew`, `pip`, `npm`, `docker`, and everything else simply don't exist in the agent's PATH.
+- **macOS**: Generates an SBPL profile from `policy.toml` and invokes `sandbox-exec`. Enforces filesystem writes, network, and denied path blocking at the kernel level.
+- **Linux**: Generates bwrap flags from `policy.toml`. Uses namespaces for filesystem isolation (`--ro-bind`), network isolation (`--unshare-net`), and process isolation (`--unshare-pid`).
 
-### Layer 2: requisites.txt filter (profile)
+### Shell tier (flox activate)
 
-In interactive mode, the profile reads `requisites.txt` and builds a restricted bin directory containing symlinks to only the listed binaries. PATH is then replaced with this directory, narrowing from ~145 package binaries to your specific whitelist.
+- **Layer 1 (hook)**: PATH wipe — only `$FLOX_ENV/bin` survives
+- **Layer 2 (profile/entrypoint)**: `requisites.txt` filter — symlink bin directory with only listed tools
+- **Layer 3 (profile/entrypoint)**: Function armor — 27 package managers shadowed with exit 126
+- **Layer 4 (hook)**: Breadcrumb cleanup — scrub `FLOX_ENV_PROJECT`, `FLOX_ENV_DIRS`
+- **Layer 5 (hook)**: Policy staging — parse `policy.toml`, generate `fs-filter.sh`, stage config
+- **fs-filter.sh**: Shell wrappers for `cp`, `mv`, `mkdir`, `rm`, etc. that check write targets against policy. Provides clear `[sandflox] BLOCKED: write to '~/.ssh' outside workspace policy` error messages.
+- **usercustomize.py**: Blocks `ensurepip`, wraps `builtins.open` for write-mode path checking.
 
-### Layer 3: Shell function armor (profile)
+### Why both tiers?
 
-27 package manager commands are shadowed with shell functions that return exit code 126 (permission denied). These are `export -f`'d so they propagate to child processes. This catches agents that try to call blocked commands by name even if they somehow modify PATH.
+Kernel enforcement returns generic "Operation not permitted". Shell enforcement returns `[sandflox] BLOCKED: ...` — agents can understand and adapt. Users who run `flox activate` directly (without `./sandflox`) still get shell-level protection.
 
-### Layer 4: Breadcrumb cleanup (hook + profile)
+## Backward compatibility
 
-Environment variables that could help an agent discover escape routes are scrubbed:
-
-- `FLOX_ENV_PROJECT` — path to manifest.toml (could be edited)
-- `FLOX_ENV_DIRS` — internal Flox paths
-- `FLOX_PATH_PATCHED` — internal Flox state
-
-### Bonus: Python ensurepip neutralization
-
-The hook injects a `usercustomize.py` that replaces Python's `ensurepip` module with a stub, preventing agents from bootstrapping pip through Python's stdlib.
-
-## Verification
-
-Run the test suite inside the sandbox:
-
-```bash
-flox activate -- bash test-sandbox.sh
-```
-
-Expected output: **35 passed, 0 failed.**
-
-## Known limitations
-
-sandflox is shell-level enforcement, not kernel-level isolation. A sufficiently determined agent could:
-
-- **Find binaries by absolute path** — e.g., `/nix/store/<hash>/bin/flox`. Mitigated by the agent not knowing the hash and having no `find` or `locate` in PATH.
-- **Write a script that modifies PATH** — the script runs in a child process that inherits the restricted PATH, but could hardcode a path.
-- **Use Python to call subprocess with an absolute path** — `subprocess.call(["/nix/store/.../bin/flox", "install", "foo"])`. Requires knowing the store path.
-- **Download and execute arbitrary code** — `curl | python3`. Mitigated by removing `curl` from `requisites.txt` if this is a concern.
-
-For kernel-level isolation on Linux, see [flox-bwrap](https://github.com/8BitTacoSupreme/flox-bwrap) which uses bubblewrap namespaces to make unmounted paths literally invisible to the agent.
-
-## sandflox vs flox-bwrap
-
-| | sandflox | flox-bwrap |
-|---|---|---|
-| **Isolation** | Shell-level | Kernel-level (Linux namespaces) |
-| **Platform** | macOS + Linux | Linux only |
-| **Blocks `flox install`** | Yes (PATH + function armor) | Yes (read-only nix store bind mount) |
-| **Blocks network exfil** | No | Yes (`--unshare-all`, opt-in `--net`) |
-| **Blocks absolute path escape** | Partially (agent must guess hash) | Fully (unmounted paths don't exist) |
-| **Setup** | `flox activate` | Requires Go build + bwrap |
-| **Best for** | Local dev, macOS, quick sandboxing | CI/CD, production, high-security |
-
-They're complementary. sandflox is the portable policy layer. flox-bwrap is the Linux enforcement layer.
+No `policy.toml` → all v2 code is skipped. The hook checks `[ -f "${FLOX_ENV_PROJECT}/policy.toml" ]` before any policy work. Existing v1 behavior (PATH wipe + requisites + function armor) is unchanged.
 
 ## Requirements
 
 - [Flox](https://flox.dev) 1.10+
+- Python 3.6+ (system Python for `./sandflox` wrapper; tomllib used on 3.11+, inline parser fallback for older)
+- macOS: `sandbox-exec` (included with macOS)
+- Linux: `bwrap` (bubblewrap) for kernel enforcement

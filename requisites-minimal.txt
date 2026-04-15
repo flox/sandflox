@@ -1,0 +1,38 @@
+# sandflox requisites — minimal profile
+# ─────────────────────────────────────────────────────────
+# Read-only inspection tools. No write commands, no network, no git.
+# Use for untrusted agents that only need to read and analyze.
+
+# --- Core shell utilities (read-only) ---
+bash
+sh
+env
+echo
+cat
+head
+tail
+ls
+wc
+sort
+uniq
+tr
+test
+printf
+date
+uname
+whoami
+id
+
+# --- Text processing ---
+grep
+egrep
+fgrep
+sed
+awk
+gawk
+cut
+diff
+
+# --- Data & scripting ---
+python3
+jq

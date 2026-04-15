@@ -1,0 +1,76 @@
+# sandflox requisites — full profile
+# ─────────────────────────────────────────────────────────
+# All non-package-manager binaries. The "trusted agent" profile.
+# Includes write tools, network tools, and version control.
+# Still blocks package managers via function armor.
+
+# --- Core shell utilities ---
+bash
+sh
+env
+echo
+cat
+head
+tail
+ls
+cp
+mv
+mkdir
+rmdir
+rm
+ln
+chmod
+dirname
+basename
+readlink
+realpath
+mktemp
+wc
+sort
+uniq
+tr
+tee
+xargs
+true
+false
+test
+printf
+date
+sleep
+uname
+whoami
+id
+touch
+
+# --- Text processing ---
+grep
+egrep
+fgrep
+sed
+awk
+gawk
+cut
+paste
+diff
+comm
+fold
+fmt
+nl
+
+# --- Data & scripting ---
+python3
+jq
+
+# --- Network ---
+curl
+
+# --- Version control ---
+git
+
+# --- File inspection ---
+file
+stat
+du
+sha256sum
+md5sum
+find
