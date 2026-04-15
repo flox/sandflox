@@ -1,7 +1,7 @@
 # Requirements: sandflox
 
 **Defined:** 2026-04-15
-**Core Value:** AI agents cannot escape the sandbox — not through PATH manipulation, absolute paths, shell redirects, or kernel syscalls — without requiring a Linux VM or devcontainer.
+**Core Value:** AI agents cannot escape the sandbox -- not through PATH manipulation, absolute paths, shell redirects, or kernel syscalls -- without requiring a Linux VM or devcontainer.
 
 ## v1 Requirements
 
@@ -19,7 +19,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Kernel Enforcement
 
-- [ ] **KERN-01**: sandflox generates Apple SBPL profiles from resolved policy — filesystem modes (workspace/strict/permissive), network modes (blocked/unrestricted), denied path blocking
+- [ ] **KERN-01**: sandflox generates Apple SBPL profiles from resolved policy -- filesystem modes (workspace/strict/permissive), network modes (blocked/unrestricted), denied path blocking
 - [ ] **KERN-02**: sandflox uses `(allow default)` SBPL baseline with selective denials (not deny-default) to support Nix store, macOS frameworks, and system libraries
 - [ ] **KERN-03**: sandflox resolves `~` and `.` to absolute paths in SBPL rules, using `/private/tmp` instead of `/tmp` for macOS symlink correctness
 - [ ] **KERN-04**: sandflox wraps `flox activate` under `sandbox-exec -f <profile>` using `syscall.Exec` for clean process replacement (no child process)
@@ -44,7 +44,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DIST-01**: sandflox builds via `flox build` using a `.flox/pkgs/sandflox.nix` expression with `buildGoModule` and `vendorHash = null`
 - [ ] **DIST-02**: sandflox publishes to FloxHub via `flox publish`
 - [ ] **DIST-03**: sandflox is installable into any Flox environment via `flox install sandflox`
-- [ ] **DIST-04**: The sandflox build manifest is minimal — only `go` in `[install]`, no hooks or profile scripts
+- [ ] **DIST-04**: The sandflox build manifest is minimal -- only `go` in `[install]`, no hooks or profile scripts
 - [ ] **DIST-05**: sandflox Nix expression uses `lib.fileset.toSource` for hermetic source selection and `-trimpath` in build flags
 
 ### Subcommands
@@ -55,7 +55,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Security
 
-- [ ] **SEC-01**: sandflox scrubs environment variables before passing them into the sandbox — only allowlisted vars pass through (HOME, USER, TERM, SHELL, LANG, PATH, plus Flox-required vars)
+- [ ] **SEC-01**: sandflox scrubs environment variables before passing them into the sandbox -- only allowlisted vars pass through (HOME, USER, TERM, SHELL, LANG, PATH, plus Flox-required vars)
 - [ ] **SEC-02**: sandflox blocks sensitive env vars by default (AWS_*, SSH_*, GPG_*, GITHUB_TOKEN, etc.) with a configurable allowlist in policy.toml
 - [ ] **SEC-03**: sandflox sets `PYTHONDONTWRITEBYTECODE=1` and `PYTHON_NOPIP=1` inside the sandbox
 
@@ -65,14 +65,14 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ### Advanced Security
 
-- **ADV-01**: Audit log — structured logging of all blocked actions to a file for post-session review
+- **ADV-01**: Audit log -- structured logging of all blocked actions to a file for post-session review
 - **ADV-02**: Domain-level network filtering via proxy (HTTP + SOCKS5) for allowlist-based network access
-- **ADV-03**: Policy composition/inheritance — base + project + user override policies
-- **ADV-04**: Process execution control via SBPL — restrict which binaries can be spawned by absolute path
+- **ADV-03**: Policy composition/inheritance -- base + project + user override policies
+- **ADV-04**: Process execution control via SBPL -- restrict which binaries can be spawned by absolute path
 
 ### Operational
 
-- **OPS-01**: Init/setup script support — run a pre-sandbox setup script for workspace preparation
+- **OPS-01**: Init/setup script support -- run a pre-sandbox setup script for workspace preparation
 - **OPS-02**: Configuration precedence model (managed > user > project) like Claude Code settings
 
 ## Out of Scope
@@ -96,46 +96,46 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | — | Pending |
-| CORE-02 | — | Pending |
-| CORE-03 | — | Pending |
-| CORE-04 | — | Pending |
-| CORE-05 | — | Pending |
-| CORE-06 | — | Pending |
-| CORE-07 | — | Pending |
-| KERN-01 | — | Pending |
-| KERN-02 | — | Pending |
-| KERN-03 | — | Pending |
-| KERN-04 | — | Pending |
-| KERN-05 | — | Pending |
-| KERN-06 | — | Pending |
-| KERN-07 | — | Pending |
-| KERN-08 | — | Pending |
-| SHELL-01 | — | Pending |
-| SHELL-02 | — | Pending |
-| SHELL-03 | — | Pending |
-| SHELL-04 | — | Pending |
-| SHELL-05 | — | Pending |
-| SHELL-06 | — | Pending |
-| SHELL-07 | — | Pending |
-| SHELL-08 | — | Pending |
-| DIST-01 | — | Pending |
-| DIST-02 | — | Pending |
-| DIST-03 | — | Pending |
-| DIST-04 | — | Pending |
-| DIST-05 | — | Pending |
-| CMD-01 | — | Pending |
-| CMD-02 | — | Pending |
-| CMD-03 | — | Pending |
-| SEC-01 | — | Pending |
-| SEC-02 | — | Pending |
-| SEC-03 | — | Pending |
+| CORE-01 | Phase 1 | Pending |
+| CORE-02 | Phase 1 | Pending |
+| CORE-03 | Phase 1 | Pending |
+| CORE-04 | Phase 1 | Pending |
+| CORE-05 | Phase 1 | Pending |
+| CORE-06 | Phase 1 | Pending |
+| CORE-07 | Phase 1 | Pending |
+| KERN-01 | Phase 2 | Pending |
+| KERN-02 | Phase 2 | Pending |
+| KERN-03 | Phase 2 | Pending |
+| KERN-04 | Phase 2 | Pending |
+| KERN-05 | Phase 2 | Pending |
+| KERN-06 | Phase 2 | Pending |
+| KERN-07 | Phase 2 | Pending |
+| KERN-08 | Phase 2 | Pending |
+| SHELL-01 | Phase 3 | Pending |
+| SHELL-02 | Phase 3 | Pending |
+| SHELL-03 | Phase 3 | Pending |
+| SHELL-04 | Phase 3 | Pending |
+| SHELL-05 | Phase 3 | Pending |
+| SHELL-06 | Phase 3 | Pending |
+| SHELL-07 | Phase 3 | Pending |
+| SHELL-08 | Phase 3 | Pending |
+| SEC-01 | Phase 4 | Pending |
+| SEC-02 | Phase 4 | Pending |
+| SEC-03 | Phase 4 | Pending |
+| CMD-01 | Phase 5 | Pending |
+| CMD-02 | Phase 5 | Pending |
+| CMD-03 | Phase 5 | Pending |
+| DIST-01 | Phase 1 | Pending |
+| DIST-02 | Phase 6 | Pending |
+| DIST-03 | Phase 6 | Pending |
+| DIST-04 | Phase 1 | Pending |
+| DIST-05 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 34 total
-- Mapped to phases: 0
-- Unmapped: 34
+- Mapped to phases: 34
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-15*
-*Last updated: 2026-04-15 after initial definition*
+*Last updated: 2026-04-15 after roadmap creation*
