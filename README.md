@@ -208,6 +208,26 @@ Kernel enforcement returns generic "Operation not permitted". Shell enforcement 
 
 No `policy.toml` → all v2 code is skipped. The hook checks `[ -f "${FLOX_ENV_PROJECT}/policy.toml" ]` before any policy work. Existing v1 behavior (PATH wipe + requisites + function armor) is unchanged.
 
+## sandflox vs flox-bwrap
+
+sandflox v2 achieves kernel-level parity with [flox-bwrap](https://github.com/8BitTacoSupreme/flox-bwrap) on macOS via `sandbox-exec`, and uses bwrap directly on Linux.
+
+| | sandflox v2 | flox-bwrap |
+|---|---|---|
+| **Isolation** | Kernel + shell (two tiers) | Kernel (Linux namespaces) |
+| **Platform** | macOS + Linux | Linux only |
+| **Blocks `flox install`** | Yes (PATH + function armor + kernel) | Yes (read-only nix store bind) |
+| **Blocks network** | Yes (`sandbox-exec` / `bwrap --unshare-net`) | Yes (`--unshare-all`, opt-in `--net`) |
+| **Blocks filesystem writes** | Yes (SBPL deny / `--ro-bind`) | Yes (`--ro-bind`) |
+| **Blocks absolute path escape** | Yes (kernel denies reads to sensitive paths) | Yes (unmounted paths don't exist) |
+| **Blocks `>` redirects** | Yes (kernel write deny) | Yes (read-only bind mount) |
+| **Declarative policy** | Yes (`policy.toml` — profiles, modes, denied paths) | No (flags only) |
+| **Agent-friendly errors** | Yes (`[sandflox] BLOCKED: ...` via shell tier) | No (generic EPERM) |
+| **Setup** | `chmod +x sandflox && ./sandflox` | Requires Go build + bwrap |
+| **Best for** | macOS + Linux, agent sandboxing, team policy | Linux-only, minimal attack surface |
+
+They're complementary. sandflox is the declarative policy layer with cross-platform kernel enforcement. flox-bwrap is the Linux-native namespace approach.
+
 ## Requirements
 
 - [Flox](https://flox.dev) 1.10+
