@@ -28,22 +28,22 @@ AI agents cannot escape the sandbox — not through PATH manipulation, absolute 
 
 ### Active
 
-- [ ] Go binary replacing Bash+Python implementation — single compiled artifact, zero external Go deps
-- [ ] Flox build: `.flox/pkgs/sandflox.nix` using `buildGoModule`, minimal manifest (just `go` in `[install]`)
+- ✓ Go binary replacing Bash+Python implementation — single compiled artifact, zero external Go deps (Phase 1)
+- ✓ Flox build: `.flox/pkgs/sandflox.nix` using `buildGoModule`, minimal manifest (just `go` in `[install]`) (Phase 1)
 - [ ] Flox publish/install: `flox publish` to FloxHub, `flox install sandflox` into any project environment
 - [ ] Interactive mode: `sandflox` wraps `sandbox-exec ... flox activate` — sandboxed interactive shell with full enforcement
 - [ ] Non-interactive mode: `sandflox -- CMD` wraps arbitrary commands under sandbox-exec + shell enforcement
 - [ ] Re-exec elevation: `sandflox elevate` from within a `flox activate` session re-execs the shell under sandbox-exec (one-time bounce)
-- [ ] Policy parsing in Go: native TOML parsing replacing inline Python parser (Go stdlib `encoding` or minimal inline parser)
+- ✓ Policy parsing in Go: custom TOML subset parser with strict validation and line-numbered errors (Phase 1)
 - [ ] SBPL profile generation in Go: generate Apple Seatbelt profiles from policy — filesystem modes, network modes, denied paths
 - [ ] Shell enforcement in Go: binary generates and applies PATH wipe, requisites symlink bin, function armor, fs-filter wrappers, breadcrumb cleanup as part of the activation it controls
-- [ ] CLI flags: `--net`, `--profile <name>`, `--policy <path>`, `--debug`, `--requisites <file>` — flags override policy.toml
+- ✓ CLI flags: `--net`, `--profile <name>`, `--policy <path>`, `--debug` — flags override policy.toml (Phase 1)
 - [ ] macOS sandbox-exec enforcement: filesystem modes (workspace/strict/permissive), network modes (blocked/unrestricted), denied paths, localhost allowance
 - [ ] Requisites management: parse requisites files, generate symlink bin directories from `$FLOX_ENV/bin`
 - [ ] Python enforcement: generate `usercustomize.py` for Python write enforcement and ensurepip blocking
-- [ ] Config caching: write resolved config, path lists, and generated artifacts to `.flox/cache/sandflox/`
-- [ ] Diagnostic output: `[sandflox]` prefixed messages to stderr (profile, network mode, filesystem mode, tool count)
-- [ ] `syscall.Exec` for clean process replacement — no child process overhead (matching flox-bwrap pattern)
+- ✓ Config caching: write resolved config, path lists, and generated artifacts to `.flox/cache/sandflox/` (Phase 1)
+- ✓ Diagnostic output: `[sandflox]` prefixed messages to stderr (profile, network mode, filesystem mode) (Phase 1)
+- ✓ `syscall.Exec` for clean process replacement — no child process overhead (matching flox-bwrap pattern) (Phase 1)
 
 ### Out of Scope
 
@@ -94,10 +94,10 @@ The competitive alternative is devcontainers, which work but add a Linux VM laye
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Go over Rust/Bash | Matches flox-bwrap precedent, zero-dep `buildGoModule`, fast compilation, good syscall support | — Pending |
+| Go over Rust/Bash | Matches flox-bwrap precedent, zero-dep `buildGoModule`, fast compilation, good syscall support | Validated (Phase 1) |
 | macOS only | sandbox-exec is the differentiator; Linux has flox-bwrap | — Pending |
-| Binary IS the entrypoint | sandflox wraps sandbox-exec around flox activate — like flox-bwrap wraps bwrap. No hooks, no profile scripts, clean minimal manifest | — Pending |
-| Keep policy.toml + flags | Declarative policy is a differentiator over flox-bwrap's flag-only approach. CLI flags override for ad-hoc use. Best of both worlds | — Pending |
+| Binary IS the entrypoint | sandflox wraps sandbox-exec around flox activate — like flox-bwrap wraps bwrap. No hooks, no profile scripts, clean minimal manifest | Validated (Phase 1) |
+| Keep policy.toml + flags | Declarative policy is a differentiator over flox-bwrap's flag-only approach. CLI flags override for ad-hoc use. Best of both worlds | Validated (Phase 1) |
 | Shell tier = reach, Kernel tier = mutate | Shell enforcement blocks agents from reaching tools (PATH, functions). Kernel enforcement blocks mutations (writes, network). Two concerns, two layers | — Pending |
 
 ## Evolution
@@ -118,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-15 after initialization*
+*Last updated: 2026-04-16 after Phase 1 completion — Go scaffold, policy engine, build validation*
