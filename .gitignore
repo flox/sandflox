@@ -3,3 +3,6 @@
 .flox/log/
 .flox/run/
 result-*
+
+# Compiled Go binary (built by `go build` into project root)
+/sandflox
