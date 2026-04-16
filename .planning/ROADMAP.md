@@ -31,12 +31,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Running `sandflox --profile minimal --net` correctly overrides policy.toml values (CLI flags win over file settings)
   4. Running sandflox with a malformed policy.toml produces a clear error message identifying the parse failure
   5. Resolved config, path lists, and generated artifacts are written to `.flox/cache/sandflox/`
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md -- Project scaffold, TOML subset parser, and policy validation
+- [ ] 01-02-PLAN.md -- Config resolution, CLI flags, cache writer, diagnostics, and main entry point
+- [ ] 01-03-PLAN.md -- Nix build expression and flox build validation
 
 ### Phase 2: Kernel Enforcement (SBPL + sandbox-exec)
 **Goal**: sandflox wraps flox activate under sandbox-exec with a generated SBPL profile that enforces filesystem modes, network modes, and denied paths at the kernel level
@@ -120,7 +120,7 @@ Note: Phase 3 depends on Phase 1 (not Phase 2), so Phases 2 and 3 could theoreti
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Go Scaffold, Policy Engine, and Build Validation | 0/3 | Not started | - |
+| 1. Go Scaffold, Policy Engine, and Build Validation | 0/3 | Planning complete | - |
 | 2. Kernel Enforcement (SBPL + sandbox-exec) | 0/3 | Not started | - |
 | 3. Shell Enforcement Artifacts | 0/3 | Not started | - |
 | 4. Security Hardening | 0/1 | Not started | - |
