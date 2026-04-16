@@ -19,14 +19,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Kernel Enforcement
 
-- [ ] **KERN-01**: sandflox generates Apple SBPL profiles from resolved policy -- filesystem modes (workspace/strict/permissive), network modes (blocked/unrestricted), denied path blocking
-- [ ] **KERN-02**: sandflox uses `(allow default)` SBPL baseline with selective denials (not deny-default) to support Nix store, macOS frameworks, and system libraries
-- [ ] **KERN-03**: sandflox resolves `~` and `.` to absolute paths in SBPL rules, using `/private/tmp` instead of `/tmp` for macOS symlink correctness
+- [x] **KERN-01**: sandflox generates Apple SBPL profiles from resolved policy -- filesystem modes (workspace/strict/permissive), network modes (blocked/unrestricted), denied path blocking
+- [x] **KERN-02**: sandflox uses `(allow default)` SBPL baseline with selective denials (not deny-default) to support Nix store, macOS frameworks, and system libraries
+- [x] **KERN-03**: sandflox resolves `~` and `.` to absolute paths in SBPL rules, using `/private/tmp` instead of `/tmp` for macOS symlink correctness
 - [ ] **KERN-04**: sandflox wraps `flox activate` under `sandbox-exec -f <profile>` using `syscall.Exec` for clean process replacement (no child process)
 - [ ] **KERN-05**: `sandflox` (no args) launches an interactive sandboxed shell via `sandbox-exec ... flox activate`
 - [ ] **KERN-06**: `sandflox -- CMD` wraps arbitrary commands via `sandbox-exec ... flox activate -- CMD`
-- [ ] **KERN-07**: sandflox allows localhost connections when `network.allow-localhost = true` even when network is blocked
-- [ ] **KERN-08**: sandflox allows Unix socket communication (Nix daemon) when network is blocked
+- [x] **KERN-07**: sandflox allows localhost connections when `network.allow-localhost = true` even when network is blocked
+- [x] **KERN-08**: sandflox allows Unix socket communication (Nix daemon) when network is blocked
 
 ### Shell Enforcement
 
@@ -103,14 +103,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORE-05 | Phase 1 | Complete |
 | CORE-06 | Phase 1 | Complete |
 | CORE-07 | Phase 1 | Complete |
-| KERN-01 | Phase 2 | Pending |
-| KERN-02 | Phase 2 | Pending |
-| KERN-03 | Phase 2 | Pending |
+| KERN-01 | Phase 2 | Complete |
+| KERN-02 | Phase 2 | Complete |
+| KERN-03 | Phase 2 | Complete |
 | KERN-04 | Phase 2 | Pending |
 | KERN-05 | Phase 2 | Pending |
 | KERN-06 | Phase 2 | Pending |
-| KERN-07 | Phase 2 | Pending |
-| KERN-08 | Phase 2 | Pending |
+| KERN-07 | Phase 2 | Complete |
+| KERN-08 | Phase 2 | Complete |
 | SHELL-01 | Phase 3 | Pending |
 | SHELL-02 | Phase 3 | Pending |
 | SHELL-03 | Phase 3 | Pending |
