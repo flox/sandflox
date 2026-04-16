@@ -6,3 +6,5 @@ result-*
 
 # Compiled Go binary (built by `go build` into project root)
 /sandflox
+# Manual-verification binary (Phase 2 Plan 03 checkpoint tooling)
+/sandflox-bin

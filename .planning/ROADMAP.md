@@ -13,7 +13,7 @@ sandflox is a brownfield rewrite: a working 500-line Bash+Python prototype being
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Go Scaffold, Policy Engine, and Build Validation** - Stand up the Go binary with TOML parsing, CLI flags, config resolution, and prove it builds via Nix
-- [ ] **Phase 2: Kernel Enforcement (SBPL + sandbox-exec)** - Generate SBPL profiles from policy and exec into sandbox-exec for filesystem/network isolation
+- [x] **Phase 2: Kernel Enforcement (SBPL + sandbox-exec)** - Generate SBPL profiles from policy and exec into sandbox-exec for filesystem/network isolation (completed 2026-04-16)
 - [ ] **Phase 3: Shell Enforcement Artifacts** - Generate PATH wipe, requisites bin, function armor, fs-filter wrappers, Python enforcement, and breadcrumb cleanup
 - [ ] **Phase 4: Security Hardening** - Scrub environment variables before sandbox entry, blocking sensitive vars and setting Python safety flags
 - [ ] **Phase 5: Subcommands** - Add validate, status, and elevate subcommands for policy inspection and re-exec elevation
@@ -53,7 +53,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md -- SBPL generator (GenerateSBPL + WriteSBPL in sbpl.go with table-driven unit tests)
 - [x] 02-02-PLAN.md -- sandbox-exec wrapper (exec_darwin.go + exec_other.go + main.go wiring with --debug SBPL diagnostic)
-- [ ] 02-03-PLAN.md -- Integration tests (real sandbox-exec subprocess) + manual verification checkpoint
+- [x] 02-03-PLAN.md -- Integration tests (real sandbox-exec subprocess) + manual verification checkpoint
 
 ### Phase 3: Shell Enforcement Artifacts
 **Goal**: sandflox generates and applies all shell-tier enforcement -- PATH restriction, requisites filtering, function armor, filesystem write wrappers, Python enforcement, and breadcrumb cleanup -- so agents cannot reach tools or discover escape vectors
@@ -121,7 +121,7 @@ Note: Phase 3 depends on Phase 1 (not Phase 2), so Phases 2 and 3 could theoreti
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Go Scaffold, Policy Engine, and Build Validation | 0/3 | Planning complete | - |
-| 2. Kernel Enforcement (SBPL + sandbox-exec) | 0/3 | Planning complete | - |
+| 2. Kernel Enforcement (SBPL + sandbox-exec) | 3/3 | Complete   | 2026-04-16 |
 | 3. Shell Enforcement Artifacts | 0/3 | Not started | - |
 | 4. Security Hardening | 0/1 | Not started | - |
 | 5. Subcommands | 0/2 | Not started | - |

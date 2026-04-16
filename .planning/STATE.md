@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-04-16T14:30:23.354Z"
+status: verifying
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-04-16T15:49:51.052Z"
 last_activity: 2026-04-16
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 100
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 
 Phase: 02 (kernel-enforcement-sbpl-sandbox-exec) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-16
 
 Progress: [##########] 100%
@@ -57,6 +57,7 @@ Progress: [##########] 100%
 | Phase 01 P03 | 4min | 2 tasks | 3 files |
 | Phase 02 P01 | 4min | 2 tasks tasks | 3 files files |
 | Phase 02 P02 | 3min | 3 tasks | 5 files |
+| Phase 02 P03 | 5min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [Phase 02]: [Phase 02]: Platform split via build tags -- //go:build darwin + //go:build !darwin keeps binary buildable on Linux CI runners while targeting macOS only
 - [Phase 02]: [Phase 02]: buildSandboxExecArgv as pure helper -- enables microsecond unit tests on argv shape without spawning sandbox-exec
 - [Phase 02]: [Phase 02]: D-07 SBPL diagnostic lives in emitDiagnostics (not exec_darwin) so --debug output is useful for dry-run inspection on any platform
+- [Phase 02]: Subprocess pattern (exec.CommandContext not syscall.Exec) is mandatory for integration tests -- test process must stay unsandboxed (Pitfall 7)
+- [Phase 02]: TestSandboxBlocksDeniedPath uses /private/tmp as project root to avoid macOS firmlink canonicalization gap (/var/folders -> /private/var/folders at VFS layer)
+- [Phase 02]: Manual verification (Task 2) skipped per user decision; plan accepted as verified by 4 automated subprocess tests. KERN-04 process-tree and KERN-05 interactive TTY rely on Plan 02-02 smoke test for confidence.
 
 ### Pending Todos
 
@@ -94,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-16T14:30:23.352Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-04-16T15:49:51.050Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
