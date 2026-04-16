@@ -52,7 +52,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md -- SBPL generator (GenerateSBPL + WriteSBPL in sbpl.go with table-driven unit tests)
-- [ ] 02-02-PLAN.md -- sandbox-exec wrapper (exec_darwin.go + exec_other.go + main.go wiring with --debug SBPL diagnostic)
+- [x] 02-02-PLAN.md -- sandbox-exec wrapper (exec_darwin.go + exec_other.go + main.go wiring with --debug SBPL diagnostic)
 - [ ] 02-03-PLAN.md -- Integration tests (real sandbox-exec subprocess) + manual verification checkpoint
 
 ### Phase 3: Shell Enforcement Artifacts
