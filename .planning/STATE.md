@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-04-16T02:12:49.011Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-04-16T02:19:12.362Z"
 last_activity: 2026-04-16
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Phase: 01 (go-scaffold-policy-engine-and-build-validation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-16
 
@@ -53,6 +53,7 @@ Progress: [..........] 0%
 
 *Updated after each plan completion*
 | Phase 01 P01 | 4min | 2 tasks | 6 files |
+| Phase 01 P02 | 4min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ Recent decisions affecting current work:
 - Roadmap: Phase 3 depends on Phase 1 (not Phase 2) since shell enforcement needs policy but not SBPL
 - [Phase 01]: Module name 'sandflox' (standalone binary, no import path needed)
 - [Phase 01]: Custom TOML subset parser (~250 lines) satisfies zero-dep constraint
+- [Phase 01]: Package-level var stderr io.Writer for testable diagnostics without subprocess spawning
+- [Phase 01]: CLI --profile is strongest override, beating env var and policy file
+- [Phase 01]: ResolvedConfig uses json:snake_case tags for byte-compatible config.json
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-16T02:12:49.009Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-04-16T02:19:12.360Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

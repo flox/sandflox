@@ -11,11 +11,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **CORE-01**: sandflox is a single Go binary with zero external dependencies (stdlib only)
 - [x] **CORE-02**: sandflox parses policy.toml v2 schema using a custom Go TOML subset parser (sections, dotted sections, strings, booleans, string arrays)
-- [ ] **CORE-03**: sandflox resolves profiles via precedence: `$SANDFLOX_PROFILE` env var > `policy.toml [meta] profile` > `"default"`
-- [ ] **CORE-04**: sandflox merges profile overrides with top-level `[network]` and `[filesystem]` settings
-- [ ] **CORE-05**: sandflox supports CLI flags `--net`, `--profile <name>`, `--policy <path>`, `--debug`, `--requisites <file>` that override policy.toml values
-- [ ] **CORE-06**: sandflox writes resolved config, path lists (writable, read-only, denied), and generated artifacts to `.flox/cache/sandflox/`
-- [ ] **CORE-07**: sandflox emits `[sandflox]` prefixed diagnostic messages to stderr (active profile, network mode, filesystem mode, tool count)
+- [x] **CORE-03**: sandflox resolves profiles via precedence: `$SANDFLOX_PROFILE` env var > `policy.toml [meta] profile` > `"default"`
+- [x] **CORE-04**: sandflox merges profile overrides with top-level `[network]` and `[filesystem]` settings
+- [x] **CORE-05**: sandflox supports CLI flags `--net`, `--profile <name>`, `--policy <path>`, `--debug`, `--requisites <file>` that override policy.toml values
+- [x] **CORE-06**: sandflox writes resolved config, path lists (writable, read-only, denied), and generated artifacts to `.flox/cache/sandflox/`
+- [x] **CORE-07**: sandflox emits `[sandflox]` prefixed diagnostic messages to stderr (active profile, network mode, filesystem mode, tool count)
 
 ### Kernel Enforcement
 
@@ -98,11 +98,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | CORE-01 | Phase 1 | Complete |
 | CORE-02 | Phase 1 | Complete |
-| CORE-03 | Phase 1 | Pending |
-| CORE-04 | Phase 1 | Pending |
-| CORE-05 | Phase 1 | Pending |
-| CORE-06 | Phase 1 | Pending |
-| CORE-07 | Phase 1 | Pending |
+| CORE-03 | Phase 1 | Complete |
+| CORE-04 | Phase 1 | Complete |
+| CORE-05 | Phase 1 | Complete |
+| CORE-06 | Phase 1 | Complete |
+| CORE-07 | Phase 1 | Complete |
 | KERN-01 | Phase 2 | Pending |
 | KERN-02 | Phase 2 | Pending |
 | KERN-03 | Phase 2 | Pending |
