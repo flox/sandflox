@@ -41,7 +41,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Distribution
 
-- [ ] **DIST-01**: sandflox builds via `flox build` using a `.flox/pkgs/sandflox.nix` expression with `buildGoModule` and `vendorHash = null`
+- [x] **DIST-01**: sandflox builds via `flox build` using a `.flox/pkgs/sandflox.nix` expression with `buildGoModule` and `vendorHash = null`
 - [ ] **DIST-02**: sandflox publishes to FloxHub via `flox publish`
 - [ ] **DIST-03**: sandflox is installable into any Flox environment via `flox install sandflox`
 - [x] **DIST-04**: The sandflox build manifest is minimal -- only `go` in `[install]`, no hooks or profile scripts
@@ -125,7 +125,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CMD-01 | Phase 5 | Pending |
 | CMD-02 | Phase 5 | Pending |
 | CMD-03 | Phase 5 | Pending |
-| DIST-01 | Phase 1 | Pending |
+| DIST-01 | Phase 1 | Complete |
 | DIST-02 | Phase 6 | Pending |
 | DIST-03 | Phase 6 | Pending |
 | DIST-04 | Phase 1 | Complete |

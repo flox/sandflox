@@ -36,7 +36,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md -- Project scaffold, TOML subset parser, and policy validation
 - [x] 01-02-PLAN.md -- Config resolution, CLI flags, cache writer, diagnostics, and main entry point
-- [ ] 01-03-PLAN.md -- Nix build expression and flox build validation
+- [x] 01-03-PLAN.md -- Nix build expression and flox build validation
 
 ### Phase 2: Kernel Enforcement (SBPL + sandbox-exec)
 **Goal**: sandflox wraps flox activate under sandbox-exec with a generated SBPL profile that enforces filesystem modes, network modes, and denied paths at the kernel level
