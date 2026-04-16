@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
@@ -57,10 +58,10 @@ func main() {
 	}
 
 	// 6. Emit diagnostics to stderr
-	emitDiagnostics(config, flags.Debug)
+	emitDiagnostics(config, projectDir, flags.Debug)
 
-	// 7. Exec into flox activate
-	execFlox(userArgs)
+	// 7. Exec into flox activate, wrapped in kernel enforcement when available
+	execWithKernelEnforcement(config, projectDir, userArgs)
 }
 
 // ── Project Directory Resolution ────────────────────────
@@ -89,8 +90,9 @@ func resolveProjectDir(flags *CLIFlags) string {
 // ── Diagnostics ─────────────────────────────────────────
 
 // emitDiagnostics writes [sandflox] prefixed diagnostic messages to stderr.
-// Always emits the summary line. Debug mode adds verbose details.
-func emitDiagnostics(config *ResolvedConfig, debug bool) {
+// Always emits the summary line. Debug mode adds verbose details including
+// the generated SBPL file path and rule count (D-07).
+func emitDiagnostics(config *ResolvedConfig, projectDir string, debug bool) {
 	// Always: summary line matching existing bash format
 	fmt.Fprintf(stderr, "[sandflox] Profile: %s | Network: %s | Filesystem: %s\n",
 		config.Profile, config.NetMode, config.FsMode)
@@ -101,6 +103,15 @@ func emitDiagnostics(config *ResolvedConfig, debug bool) {
 		fmt.Fprintf(stderr, "[sandflox] Writable paths: %v\n", config.Writable)
 		fmt.Fprintf(stderr, "[sandflox] Read-only paths: %v\n", config.ReadOnly)
 		fmt.Fprintf(stderr, "[sandflox] Denied paths: %v\n", config.Denied)
+
+		// D-07: SBPL diagnostic -- path and rule count. The actual .sb
+		// file is written by execWithKernelEnforcement (darwin) via
+		// WriteSBPL; here we just recompute the content to count rules.
+		home, _ := os.UserHomeDir()
+		sbplContent := GenerateSBPL(config, home)
+		sbplPath := filepath.Join(projectDir, ".flox", "cache", "sandflox", "sandflox.sb")
+		ruleCount := strings.Count(sbplContent, "\n(deny ") + strings.Count(sbplContent, "\n(allow ")
+		fmt.Fprintf(stderr, "[sandflox] sbpl: %s (%d rules)\n", sbplPath, ruleCount)
 	}
 }
 

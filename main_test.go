@@ -20,7 +20,7 @@ func TestDiagnosticsBasicFormat(t *testing.T) {
 		NetMode: "blocked",
 		FsMode:  "workspace",
 	}
-	emitDiagnostics(config, false)
+	emitDiagnostics(config, "/test/project", false)
 
 	output := buf.String()
 	expected := "[sandflox] Profile: default | Network: blocked | Filesystem: workspace"
@@ -31,6 +31,9 @@ func TestDiagnosticsBasicFormat(t *testing.T) {
 	// Debug-only lines should NOT appear
 	if strings.Contains(output, "Requisites:") {
 		t.Error("non-debug output should not contain Requisites line")
+	}
+	if strings.Contains(output, "[sandflox] sbpl:") {
+		t.Error("non-debug output should not contain sbpl diagnostic")
 	}
 }
 
@@ -50,7 +53,7 @@ func TestDiagnosticsDebugOutput(t *testing.T) {
 		ReadOnly:       []string{"/project/.git/"},
 		Denied:         []string{"/home/user/.ssh/"},
 	}
-	emitDiagnostics(config, true)
+	emitDiagnostics(config, "/test/project", true)
 
 	output := buf.String()
 
@@ -72,6 +75,13 @@ func TestDiagnosticsDebugOutput(t *testing.T) {
 	if !strings.Contains(output, "Denied paths:") {
 		t.Error("debug output should contain denied paths")
 	}
+	// D-07: SBPL diagnostic line must appear under --debug
+	if !strings.Contains(output, "[sandflox] sbpl: /test/project/.flox/cache/sandflox/sandflox.sb") {
+		t.Errorf("debug output should contain sbpl diagnostic line, got:\n%s", output)
+	}
+	if !strings.Contains(output, "rules)") {
+		t.Error("debug output sbpl line should contain rule count suffix")
+	}
 }
 
 func TestDiagnosticsMinimalProfile(t *testing.T) {
@@ -85,7 +95,7 @@ func TestDiagnosticsMinimalProfile(t *testing.T) {
 		NetMode: "blocked",
 		FsMode:  "strict",
 	}
-	emitDiagnostics(config, false)
+	emitDiagnostics(config, "/test/project", false)
 
 	output := buf.String()
 	if !strings.Contains(output, "Profile: minimal") {
