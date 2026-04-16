@@ -9,8 +9,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Core Binary
 
-- [ ] **CORE-01**: sandflox is a single Go binary with zero external dependencies (stdlib only)
-- [ ] **CORE-02**: sandflox parses policy.toml v2 schema using a custom Go TOML subset parser (sections, dotted sections, strings, booleans, string arrays)
+- [x] **CORE-01**: sandflox is a single Go binary with zero external dependencies (stdlib only)
+- [x] **CORE-02**: sandflox parses policy.toml v2 schema using a custom Go TOML subset parser (sections, dotted sections, strings, booleans, string arrays)
 - [ ] **CORE-03**: sandflox resolves profiles via precedence: `$SANDFLOX_PROFILE` env var > `policy.toml [meta] profile` > `"default"`
 - [ ] **CORE-04**: sandflox merges profile overrides with top-level `[network]` and `[filesystem]` settings
 - [ ] **CORE-05**: sandflox supports CLI flags `--net`, `--profile <name>`, `--policy <path>`, `--debug`, `--requisites <file>` that override policy.toml values
@@ -44,7 +44,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DIST-01**: sandflox builds via `flox build` using a `.flox/pkgs/sandflox.nix` expression with `buildGoModule` and `vendorHash = null`
 - [ ] **DIST-02**: sandflox publishes to FloxHub via `flox publish`
 - [ ] **DIST-03**: sandflox is installable into any Flox environment via `flox install sandflox`
-- [ ] **DIST-04**: The sandflox build manifest is minimal -- only `go` in `[install]`, no hooks or profile scripts
+- [x] **DIST-04**: The sandflox build manifest is minimal -- only `go` in `[install]`, no hooks or profile scripts
 - [ ] **DIST-05**: sandflox Nix expression uses `lib.fileset.toSource` for hermetic source selection and `-trimpath` in build flags
 
 ### Subcommands
@@ -96,8 +96,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | Phase 1 | Pending |
-| CORE-02 | Phase 1 | Pending |
+| CORE-01 | Phase 1 | Complete |
+| CORE-02 | Phase 1 | Complete |
 | CORE-03 | Phase 1 | Pending |
 | CORE-04 | Phase 1 | Pending |
 | CORE-05 | Phase 1 | Pending |
@@ -128,7 +128,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DIST-01 | Phase 1 | Pending |
 | DIST-02 | Phase 6 | Pending |
 | DIST-03 | Phase 6 | Pending |
-| DIST-04 | Phase 1 | Pending |
+| DIST-04 | Phase 1 | Complete |
 | DIST-05 | Phase 6 | Pending |
 
 **Coverage:**

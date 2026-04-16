@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Project scaffold, TOML subset parser, and policy validation
+- [x] 01-01-PLAN.md -- Project scaffold, TOML subset parser, and policy validation
 - [ ] 01-02-PLAN.md -- Config resolution, CLI flags, cache writer, diagnostics, and main entry point
 - [ ] 01-03-PLAN.md -- Nix build expression and flox build validation
 
