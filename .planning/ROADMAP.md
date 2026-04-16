@@ -65,12 +65,12 @@ Plans:
   3. Running `cp /etc/hosts /tmp/stolen` from inside the sandbox is intercepted by fs-filter with a `[sandflox] BLOCKED:` message explaining the denial
   4. Python code running `open('/etc/passwd', 'w')` inside the sandbox is blocked by the usercustomize.py enforcement
   5. Environment variables `FLOX_ENV_PROJECT`, `FLOX_ENV_DIRS`, and `FLOX_PATH_PATCHED` are not visible inside the sandbox
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md -- Shell-tier generators: embedded templates (entrypoint.sh/fs-filter.sh/usercustomize.py) + shell.go (Generate* + WriteShellArtifacts + shellquote) + unit tests (SHELL-01..SHELL-08 at unit level)
+- [ ] 03-02-PLAN.md -- Runtime wiring: WriteShellArtifacts in main.go, buildSandboxExecArgv rewire for D-01/D-02 (bash --rcfile / bash -c source), update Phase 2 argv tests, add net-blocked.flag writer to cache.go
+- [ ] 03-03-PLAN.md -- Subprocess integration tests: shell_integration_test.go covering SHELL-01..SHELL-08 end-to-end under real flox + sandbox-exec + bash
 
 ### Phase 4: Security Hardening
 **Goal**: sandflox scrubs the environment before sandbox entry so sensitive credentials and configuration do not leak into the agent's execution context
@@ -122,7 +122,7 @@ Note: Phase 3 depends on Phase 1 (not Phase 2), so Phases 2 and 3 could theoreti
 |-------|----------------|--------|-----------|
 | 1. Go Scaffold, Policy Engine, and Build Validation | 0/3 | Planning complete | - |
 | 2. Kernel Enforcement (SBPL + sandbox-exec) | 3/3 | Complete   | 2026-04-16 |
-| 3. Shell Enforcement Artifacts | 0/3 | Not started | - |
+| 3. Shell Enforcement Artifacts | 0/3 | Planning complete | - |
 | 4. Security Hardening | 0/1 | Not started | - |
 | 5. Subcommands | 0/2 | Not started | - |
 | 6. Distribution and Polish | 0/1 | Not started | - |
