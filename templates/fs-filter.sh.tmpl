@@ -30,6 +30,7 @@ _sfx_check_write_target() {
 {{range .ReadOnly}}  case "$resolved" in {{. | shellquote}}|{{. | shellquote}}/*) echo "[sandflox] BLOCKED: \"$target\" is read-only by policy" >&2; return 126;; esac
 {{end}}{{end}}  return 0
 }
+export -f _sfx_check_write_target
 
 # ── Write-command wrappers ───────────────────────────────
 

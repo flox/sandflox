@@ -35,7 +35,7 @@ if [ -f "$_sfx_req" ]; then
   export PATH="$_sfx_bin"
   _sfx_profile_name="default"
   [ -f "${FLOX_ENV_CACHE}/sandflox/active-profile.txt" ] && \
-    _sfx_profile_name=$(cat "${FLOX_ENV_CACHE}/sandflox/active-profile.txt" 2>/dev/null | tr -d '\n')
+    read -r _sfx_profile_name < "${FLOX_ENV_CACHE}/sandflox/active-profile.txt" 2>/dev/null
   echo "[sandflox] Sandbox active: $_sfx_count tools (profile: $_sfx_profile_name)" >&2
 fi
 
