@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-04-17T00:31:22.839Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-04-17T00:40:19.927Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 100
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 ## Current Position
 
 Phase: 03 (shell-enforcement-artifacts) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-17
 
@@ -59,6 +59,7 @@ Progress: [##########] 100%
 | Phase 02 P02 | 3min | 3 tasks | 5 files |
 | Phase 02 P03 | 5min | 1 tasks | 1 files |
 | Phase 03 P01 | 5min | 2 tasks | 5 files |
+| Phase 03 P02 | 5min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 03]: Improved fs-filter prefix matching: dual case alternatives over bash bug-for-bug compat
 - [Phase 03]: text/template (not html/template) for shell generation; shellquote FuncMap for safe quoting
 - [Phase 03]: usercustomize.py is static template -- Python reads cached state files at runtime, no Go substitutions
+- [Phase 03]: Renamed TestBuildSandboxExecArgs_NoUserArgsDoesNotEmitDoubleDash to InteractiveUsesRcfileNotDashC -- D-01 interactive now includes '--' before bash
+- [Phase 03]: net-blocked.flag writer already present in cache.go from Phase 1; only toggle test added in Plan 03-02
 
 ### Pending Todos
 
@@ -102,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-17T00:31:22.837Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-04-17T00:40:19.925Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
