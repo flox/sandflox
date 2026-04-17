@@ -30,7 +30,7 @@ AI agents cannot escape the sandbox — not through PATH manipulation, absolute 
 
 - ✓ Go binary replacing Bash+Python implementation — single compiled artifact, zero external Go deps (Phase 1)
 - ✓ Flox build: `.flox/pkgs/sandflox.nix` using `buildGoModule`, minimal manifest (just `go` in `[install]`) (Phase 1)
-- [ ] Flox publish/install: `flox publish` to FloxHub, `flox install sandflox` into any project environment
+- ✓ Flox publish/install: `flox publish` to FloxHub, `flox install 8BitTacoSupreme/sandflox` into any project environment (Phase 6)
 - ✓ Interactive mode: `sandflox` wraps `sandbox-exec ... flox activate` — sandboxed interactive shell with kernel enforcement (Phase 2)
 - ✓ Non-interactive mode: `sandflox -- CMD` wraps arbitrary commands under sandbox-exec (Phase 2 — shell enforcement still pending Phase 3)
 - ✓ Re-exec elevation: `sandflox elevate` from within a `flox activate` session re-execs the shell under sandbox-exec (one-time bounce) (Phase 5)
@@ -121,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-17 after Phase 5 completion — subcommand routing (validate/status/elevate), dry-run policy inspection, cached state reader, re-exec elevation with session detection and nesting guard*
+*Last updated: 2026-04-17 after Phase 6 completion — published to FloxHub as 8BitTacoSupreme/sandflox, hermetic Nix build with fileset.toSource and -trimpath, installable via flox install. All v1.0 milestone phases complete.*
