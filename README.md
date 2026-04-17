@@ -1,100 +1,46 @@
 # sandflox
 
-Immutable agent sandbox powered by [Flox](https://flox.dev).
+macOS-native sandbox for AI coding agents, distributed as a [Flox](https://flox.dev) package.
 
 The agent gets the plastic shovel and pail. The bulldozer stays in the shed.
 
 ## Problem
 
-AI coding agents (Claude Code, Cursor, Copilot, etc.) can run shell commands. Even when prompted not to, they can `flox install`, `pip install`, `npm install`, or `brew install` — mutating the environment out from under you. Prompting isn't security. You need technical enforcement.
+AI coding agents (Claude Code, Cursor, Copilot, etc.) can run shell commands. Even when prompted not to, they can `flox install`, `pip install`, `npm install`, or `brew install` — mutating your environment out from under you. Prompting isn't security. You need technical enforcement.
 
-## Architecture
+sandflox wraps `flox activate` under Apple's `sandbox-exec`, enforcing what tools an agent can reach (shell enforcement) and what it can mutate (kernel enforcement). Driven by a declarative `policy.toml`. Zero external dependencies. Single static Go binary.
 
-sandflox v2 provides two enforcement tiers that compose:
-
-```
-policy.toml (declarative, version-controlled, team-sharable via FloxHub)
-    │
-    ▼
-./sandflox (wrapper script)
-    ├── macOS: policy.toml → .sb profile → sandbox-exec
-    └── Linux: policy.toml → bwrap flags → bwrap
-    │
-    ▼
-flox activate (inside the sandbox)
-    → hook:    PATH wipe, breadcrumb cleanup, python ensurepip block
-    → profile: binary whitelist, function armor, fs-filter
-
-┌──────────────────────────────────────────────────────────────────┐
-│  Tier 1 — Kernel (sandbox-exec / bwrap)                         │
-│  Blocks: redirects, absolute-path binaries, raw socket I/O      │
-│  Enforcement: filesystem writes, network, denied paths           │
-├──────────────────────────────────────────────────────────────────┤
-│  Tier 2 — Shell (flox activate hooks + profile)                  │
-│  Blocks: package managers, escape vectors, breadcrumb discovery  │
-│  Enforcement: PATH wipe, requisites filter, function armor       │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-| Tier | macOS | Linux | Intercepts redirects? | Intercepts abs paths? |
-|------|-------|-------|----------------------|----------------------|
-| Shell (`flox activate`) | PATH + functions | PATH + functions | No | No |
-| Kernel (`./sandflox`) | sandbox-exec SBPL | bwrap namespaces | Yes | Yes |
-
-## Quick start
-
-### Hardened activation (recommended for agent sessions)
+## Install
 
 ```bash
-git clone https://github.com/8BitTacoSupreme/sandflox.git
-cd sandflox
-chmod +x sandflox
-
-# Interactive shell with kernel enforcement
-./sandflox
-
-# Run a command
-./sandflox -- bash agent-script.sh
-
-# Override profile
-SANDFLOX_PROFILE=minimal ./sandflox -- python3 agent.py
+flox install 8BitTacoSupreme/sandflox
 ```
 
-### Shell-only activation (no kernel enforcement)
+That's it. The `sandflox` binary is now available inside any `flox activate` session.
 
-```bash
-flox activate
-# [sandflox] Sandbox active: 55 tools (profile: default)
-```
+## Quick Start
 
-### Verification
+### 1. Create a policy
 
-```bash
-# Full test suite (kernel + shell)
-./sandflox -- bash test-policy.sh    # 29 passed, 0 failed
-
-# Legacy test suite
-./sandflox -- bash test-sandbox.sh   # 35 passed, 0 failed
-```
-
-## `policy.toml` — Declarative Policy
-
-The policy file controls network access, filesystem restrictions, and profile selection.
+Drop a `policy.toml` in your project root (or copy the example from this repo):
 
 ```toml
 [meta]
 version = "2"
-profile = "default"              # selects from [profiles.*]
+profile = "default"
 
 [network]
-mode = "blocked"                 # "unrestricted" | "blocked"
-allow-localhost = true           # allow loopback even when blocked
+mode = "blocked"
+allow-localhost = true
 
 [filesystem]
-mode = "workspace"               # "permissive" | "workspace" | "strict"
+mode = "workspace"
 writable = [".", "/tmp"]
-read-only = [".flox/env/", ".git/", ".env", "policy.toml", "requisites.txt"]
+read-only = [".flox/env/", ".git/", ".env", "policy.toml"]
 denied = ["~/.ssh/", "~/.gnupg/", "~/.aws/", "~/.config/gcloud/", "~/.config/gh/"]
+
+[security]
+env-passthrough = []
 
 [profiles.minimal]
 requisites = "requisites-minimal.txt"
@@ -112,22 +58,160 @@ network = "unrestricted"
 filesystem = "permissive"
 ```
 
-### Profile resolution
+### 2. Validate your policy (dry run)
 
-1. `$SANDFLOX_PROFILE` env var (highest priority)
-2. `policy.toml [meta] profile`
-3. `"default"`
+```bash
+sandflox validate
+```
 
-### Network modes
+Prints what would be enforced — profile, filesystem mode, network mode, denied paths, tool count — without launching a sandbox.
+
+```bash
+sandflox validate -debug
+```
+
+Adds SBPL rule count, cache artifact details, and full diagnostic output.
+
+### 3. Launch a sandboxed shell
+
+```bash
+# Interactive shell with kernel enforcement
+sandflox
+
+# Run a single command under sandbox
+sandflox -- echo "hello from the sandbox"
+
+# Override profile
+sandflox -profile minimal
+
+# Wrap an agent session
+sandflox -- claude-code
+```
+
+### 4. Verify enforcement
+
+Inside the sandbox:
+
+```bash
+# PATH is restricted to allowed tools only
+echo $PATH                    # only the sandflox symlink bin directory
+
+# Package managers are blocked
+which pip                     # not found
+pip install requests          # [sandflox] BLOCKED: pip is not available in this sandbox
+
+# Filesystem writes outside workspace are blocked
+cp /etc/hosts /tmp/stolen     # [sandflox] BLOCKED: write to '/etc/hosts' outside workspace policy
+
+# Network is blocked at the kernel level
+curl https://example.com      # Operation not permitted
+
+# Credentials are scrubbed
+echo $AWS_SECRET_ACCESS_KEY   # empty (even if set in parent shell)
+echo $HOME                    # preserved (allowlisted)
+```
+
+### 5. Check status from inside the sandbox
+
+```bash
+sandflox status
+```
+
+Reports the active profile, blocked paths, allowed tools, and network mode from cached state.
+
+### 6. Elevate an existing flox session
+
+Already inside `flox activate` but want sandbox enforcement?
+
+```bash
+sandflox elevate
+```
+
+Re-execs the shell under `sandbox-exec`. Running it again prints "already sandboxed" instead of nesting.
+
+## Architecture
+
+```
+policy.toml (declarative, version-controlled)
+    │
+    ▼
+sandflox (Go binary)
+    ├── Parse policy.toml → ResolvedConfig
+    ├── Generate shell artifacts (entrypoint.sh, fs-filter.sh, usercustomize.py)
+    ├── Generate SBPL profile (macOS kernel sandbox rules)
+    ├── Sanitize environment (scrub credentials)
+    └── exec sandbox-exec ... flox activate -- bash
+
+┌──────────────────────────────────────────────────────────────────┐
+│  Tier 1 — Kernel (sandbox-exec SBPL)                             │
+│  Blocks: redirects, absolute-path binaries, raw socket I/O       │
+│  Enforcement: filesystem writes, network, denied paths            │
+├──────────────────────────────────────────────────────────────────┤
+│  Tier 2 — Shell (generated bash artifacts)                        │
+│  Blocks: package managers, escape vectors, breadcrumb discovery   │
+│  Enforcement: PATH wipe, requisites filter, function armor        │
+├──────────────────────────────────────────────────────────────────┤
+│  Tier 3 — Environment                                             │
+│  Blocks: credential leakage, Python pip bootstrap                 │
+│  Enforcement: allowlist-based env scrubbing, forced safety flags   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Why both tiers?
+
+Kernel enforcement returns generic "Operation not permitted". Shell enforcement returns `[sandflox] BLOCKED: ...` — agents can understand and adapt. Environment scrubbing prevents credential leakage even if the agent never hits a kernel deny.
+
+## CLI Reference
+
+```
+sandflox [flags] [-- command args...]
+sandflox <subcommand> [flags]
+```
+
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `-policy <path>` | Path to policy.toml (default: `./policy.toml`) |
+| `-profile <name>` | Override active profile (beats env var and policy file) |
+| `-net` | Override network to unrestricted |
+| `-debug` | Emit verbose diagnostics to stderr |
+
+### Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `sandflox validate` | Dry-run — print what would be enforced without launching a sandbox |
+| `sandflox status` | Report active enforcement state from inside a sandboxed session |
+| `sandflox elevate` | Re-exec current flox session under sandbox-exec |
+
+### Profile Resolution
+
+1. `-profile` CLI flag (highest priority)
+2. `$SANDFLOX_PROFILE` env var
+3. `policy.toml [meta] profile`
+4. `"default"`
+
+## What Gets Blocked
+
+| Category | Blocked |
+|----------|---------|
+| System package managers | `flox`, `nix`, `nix-env`, `nix-store`, `nix-shell`, `nix-build`, `apt`, `apt-get`, `yum`, `dnf`, `brew`, `snap`, `flatpak` |
+| Language package managers | `pip`, `pip3`, `npm`, `npx`, `yarn`, `pnpm`, `cargo`, `go`, `gem`, `composer`, `uv` |
+| Container tools | `docker`, `podman` |
+| Python escape vectors | `python3 -m pip`, `python3 -m ensurepip`, `python3 -m venv` |
+| Filesystem (kernel) | Writes outside workspace, reads to `~/.ssh`, `~/.gnupg`, `~/.aws` |
+| Network (kernel) | All outbound TCP/UDP when `network = "blocked"` |
+| Environment | `AWS_*`, `GITHUB_*`, `SSH_*`, `GCP_*`, and 20+ credential-carrying prefixes |
+
+## Network Modes
 
 | Mode | Behavior |
 |------|----------|
 | `blocked` | All TCP/UDP denied at kernel level. Unix sockets allowed (nix daemon). Localhost allowed if `allow-localhost = true`. curl removed from PATH. |
 | `unrestricted` | No network restrictions. |
 
-Domain-level filtering requires a proxy and is out of scope. Shell-level curl wrappers remain as defense-in-depth.
-
-### Filesystem modes
+## Filesystem Modes
 
 | Mode | Behavior |
 |------|----------|
@@ -135,102 +219,62 @@ Domain-level filtering requires a proxy and is out of scope. Shell-level curl wr
 | `strict` | No user-writable paths. Only temp dirs for shell operation. |
 | `permissive` | No write restrictions. |
 
-### Requisites profiles
+## Requisites Profiles
 
 | Profile | Tools | Use case |
 |---------|-------|----------|
 | `requisites-minimal.txt` | ~28 | Read-only inspection. No cp/mv/rm/curl/git. Untrusted agents. |
 | `requisites.txt` | ~55 | Default. Shell utils, text processing, python3, jq, curl, git. |
-| `requisites-full.txt` | ~54+ | All non-manager binaries. Trusted agents. |
-
-## What gets blocked
-
-| Category | Blocked commands |
-|----------|-----------------|
-| System package managers | `flox`, `nix`, `nix-env`, `nix-store`, `nix-shell`, `nix-build`, `apt`, `apt-get`, `yum`, `dnf`, `brew`, `snap`, `flatpak` |
-| Language package managers | `pip`, `pip3`, `npm`, `npx`, `yarn`, `pnpm`, `cargo`, `go`, `gem`, `composer`, `uv` |
-| Container tools | `docker`, `podman` |
-| Python escape vectors | `python3 -m pip`, `python3 -m ensurepip`, `python3 -m venv` |
-| Filesystem (kernel) | Writes outside workspace, reads to `~/.ssh`, `~/.gnupg`, `~/.aws` |
-| Network (kernel) | All outbound TCP/UDP when `network = "blocked"` |
+| `requisites-full.txt` | ~54+ | All non-manager binaries. Trusted agents needing find, touch, etc. |
 
 ## Customization
 
 ### Add a tool
 
 Add the binary name to `requisites.txt`:
+
 ```
-# --- My additions ---
+# My additions
 wget
 tree
 ```
 
-If the binary comes from a package not yet installed, add it to `[install]` in the manifest:
+If the tool isn't in your Flox environment yet:
+
 ```bash
-# Outside the sandbox (before activating):
-flox edit
-# Add: wget.pkg-path = "wget"
+flox install wget
 ```
 
-### Remove a tool
+### Allow a credential through
 
-Delete or comment out the line in `requisites.txt`:
+Add it to `policy.toml`:
+
+```toml
+[security]
+env-passthrough = ["ANTHROPIC_API_KEY"]
 ```
-# curl    ← commented out, agent can no longer fetch URLs
-```
 
-### Tune the policy
+### Tune filesystem policy
 
-Edit `policy.toml` to change network mode, filesystem mode, or denied paths. Changes take effect on next `./sandflox` invocation.
-
-## How the enforcement layers work
-
-### Kernel tier (./sandflox wrapper)
-
-- **macOS**: Generates an SBPL profile from `policy.toml` and invokes `sandbox-exec`. Enforces filesystem writes, network, and denied path blocking at the kernel level.
-- **Linux**: Generates bwrap flags from `policy.toml`. Uses namespaces for filesystem isolation (`--ro-bind`), network isolation (`--unshare-net`), and process isolation (`--unshare-pid`).
-
-### Shell tier (flox activate)
-
-- **Layer 1 (hook)**: PATH wipe — only `$FLOX_ENV/bin` survives
-- **Layer 2 (profile/entrypoint)**: `requisites.txt` filter — symlink bin directory with only listed tools
-- **Layer 3 (profile/entrypoint)**: Function armor — 27 package managers shadowed with exit 126
-- **Layer 4 (hook)**: Breadcrumb cleanup — scrub `FLOX_ENV_PROJECT`, `FLOX_ENV_DIRS`
-- **Layer 5 (hook)**: Policy staging — parse `policy.toml`, generate `fs-filter.sh`, stage config
-- **fs-filter.sh**: Shell wrappers for `cp`, `mv`, `mkdir`, `rm`, etc. that check write targets against policy. Provides clear `[sandflox] BLOCKED: write to '~/.ssh' outside workspace policy` error messages.
-- **usercustomize.py**: Blocks `ensurepip`, wraps `builtins.open` for write-mode path checking.
-
-### Why both tiers?
-
-Kernel enforcement returns generic "Operation not permitted". Shell enforcement returns `[sandflox] BLOCKED: ...` — agents can understand and adapt. Users who run `flox activate` directly (without `./sandflox`) still get shell-level protection.
-
-## Backward compatibility
-
-No `policy.toml` → all v2 code is skipped. The hook checks `[ -f "${FLOX_ENV_PROJECT}/policy.toml" ]` before any policy work. Existing v1 behavior (PATH wipe + requisites + function armor) is unchanged.
-
-## sandflox vs flox-bwrap
-
-sandflox v2 achieves kernel-level parity with [flox-bwrap](https://github.com/8BitTacoSupreme/flox-bwrap) on macOS via `sandbox-exec`, and uses bwrap directly on Linux.
-
-| | sandflox v2 | flox-bwrap |
-|---|---|---|
-| **Isolation** | Kernel + shell (two tiers) | Kernel (Linux namespaces) |
-| **Platform** | macOS + Linux | Linux only |
-| **Blocks `flox install`** | Yes (PATH + function armor + kernel) | Yes (read-only nix store bind) |
-| **Blocks network** | Yes (`sandbox-exec` / `bwrap --unshare-net`) | Yes (`--unshare-all`, opt-in `--net`) |
-| **Blocks filesystem writes** | Yes (SBPL deny / `--ro-bind`) | Yes (`--ro-bind`) |
-| **Blocks absolute path escape** | Yes (kernel denies reads to sensitive paths) | Yes (unmounted paths don't exist) |
-| **Blocks `>` redirects** | Yes (kernel write deny) | Yes (read-only bind mount) |
-| **Declarative policy** | Yes (`policy.toml` — profiles, modes, denied paths) | No (flags only) |
-| **Agent-friendly errors** | Yes (`[sandflox] BLOCKED: ...` via shell tier) | No (generic EPERM) |
-| **Setup** | `chmod +x sandflox && ./sandflox` | Requires Go build + bwrap |
-| **Best for** | macOS + Linux, agent sandboxing, team policy | Linux-only, minimal attack surface |
-
-They're complementary. sandflox is the declarative policy layer with cross-platform kernel enforcement. flox-bwrap is the Linux-native namespace approach.
+Edit `policy.toml` to change modes, writable paths, or denied paths. Changes take effect on next `sandflox` invocation.
 
 ## Requirements
 
+- macOS (Darwin) — sandbox-exec is macOS-specific
 - [Flox](https://flox.dev) 1.10+
-- Python 3.6+ (system Python for `./sandflox` wrapper; tomllib used on 3.11+, inline parser fallback for older)
-- macOS: `sandbox-exec` (included with macOS)
-- Linux: `bwrap` (bubblewrap) for kernel enforcement
+
+## sandflox vs alternatives
+
+| | sandflox | flox-bwrap | devcontainer |
+|---|---|---|---|
+| **Platform** | macOS | Linux | Any (VM) |
+| **Isolation** | Kernel + shell + env | Kernel (namespaces) | Full VM |
+| **Setup** | `flox install` | Go build + bwrap | Docker + config |
+| **Declarative policy** | Yes (`policy.toml`) | No (flags only) | Partial (devcontainer.json) |
+| **Agent-friendly errors** | Yes (`[sandflox] BLOCKED:`) | No (generic EPERM) | No |
+| **Performance** | Native (no VM) | Native | VM overhead |
+| **Credential scrubbing** | Yes (allowlist-based) | No | Manual |
+
+## License
+
+MIT
