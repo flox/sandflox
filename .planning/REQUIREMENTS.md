@@ -51,7 +51,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **CMD-01**: `sandflox validate` parses policy.toml, generates SBPL (dry-run), and reports what would be enforced without executing
 - [x] **CMD-02**: `sandflox status` reads cached enforcement state and reports active profile, blocked paths, allowed tools, network mode
-- [ ] **CMD-03**: `sandflox elevate` from within a `flox activate` session re-execs the current shell under sandbox-exec with generated SBPL (one-time bounce with re-entry detection)
+- [x] **CMD-03**: `sandflox elevate` from within a `flox activate` session re-execs the current shell under sandbox-exec with generated SBPL (one-time bounce with re-entry detection)
 
 ### Security
 
@@ -124,7 +124,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-03 | Phase 4 | Complete |
 | CMD-01 | Phase 5 | Complete |
 | CMD-02 | Phase 5 | Complete |
-| CMD-03 | Phase 5 | Pending |
+| CMD-03 | Phase 5 | Complete |
 | DIST-01 | Phase 1 | Complete |
 | DIST-02 | Phase 6 | Pending |
 | DIST-03 | Phase 6 | Pending |
