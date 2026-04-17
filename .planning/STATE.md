@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-04-17T01:57:03.325Z"
+status: executing
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-04-17T11:55:55.585Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 13
+  completed_plans: 12
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** AI agents cannot escape the sandbox -- not through PATH manipulation, absolute paths, shell redirects, or kernel syscalls -- without requiring a Linux VM or devcontainer.
-**Current focus:** Phase 04 — security-hardening
+**Current focus:** Phase 05 — subcommands
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 05 (subcommands) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-17
 
 Progress: [##########] 100%
@@ -63,6 +63,7 @@ Progress: [##########] 100%
 | Phase 03 P03 | 10min | 1 tasks | 3 files |
 | Phase 04 P01 | 4min | 1 tasks | 7 files |
 | Phase 04 P02 | 3min | 2 tasks | 4 files |
+| Phase 05 P01 | 5min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Forced vars in Go + shell (defense-in-depth): PYTHONDONTWRITEBYTECODE=1 and PYTHON_NOPIP=1 set before exec
 - [Phase 04]: Sorted env output for deterministic --debug and test assertions
 - [Phase 04]: cfg nil guard in execFlox: no-policy fallback passes os.Environ() unchanged for graceful degradation
+- [Phase 05]: extractSubcommand scans all arg positions for known subcommands, stops at -- delimiter for backward compat
+- [Phase 05]: WithExitCode testable handler pattern returns int exit code instead of os.Exit
+- [Phase 05]: discoverCacheDir prefers FLOX_ENV_CACHE over project-relative path for cache location
 
 ### Pending Todos
 
@@ -116,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-17T01:53:25.844Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-04-17T11:55:55.583Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

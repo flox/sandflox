@@ -97,7 +97,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Subcommand routing (extractSubcommand + main.go rewire) + validate handler (CMD-01) + status handler with ReadCache (CMD-02)
+- [x] 05-01-PLAN.md -- Subcommand routing (extractSubcommand + main.go rewire) + validate handler (CMD-01) + status handler with ReadCache (CMD-02)
 - [ ] 05-02-PLAN.md -- Elevate subcommand (CMD-03): buildElevateArgv, elevateExec, re-entry/session detection, platform stubs
 
 ### Phase 6: Distribution and Polish
