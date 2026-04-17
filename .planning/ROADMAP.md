@@ -68,7 +68,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Shell-tier generators: embedded templates (entrypoint.sh/fs-filter.sh/usercustomize.py) + shell.go (Generate* + WriteShellArtifacts + shellquote) + unit tests (SHELL-01..SHELL-08 at unit level)
+- [x] 03-01-PLAN.md -- Shell-tier generators: embedded templates (entrypoint.sh/fs-filter.sh/usercustomize.py) + shell.go (Generate* + WriteShellArtifacts + shellquote) + unit tests (SHELL-01..SHELL-08 at unit level)
 - [ ] 03-02-PLAN.md -- Runtime wiring: WriteShellArtifacts in main.go, buildSandboxExecArgv rewire for D-01/D-02 (bash --rcfile / bash -c source), update Phase 2 argv tests, add net-blocked.flag writer to cache.go
 - [ ] 03-03-PLAN.md -- Subprocess integration tests: shell_integration_test.go covering SHELL-01..SHELL-08 end-to-end under real flox + sandbox-exec + bash
 

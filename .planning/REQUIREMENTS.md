@@ -30,14 +30,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Shell Enforcement
 
-- [ ] **SHELL-01**: sandflox wipes PATH to contain only the requisites-filtered symlink bin directory
-- [ ] **SHELL-02**: sandflox parses the active requisites file and creates a symlink bin directory in `.flox/cache/sandflox/bin/` containing only listed tools from `$FLOX_ENV/bin`
-- [ ] **SHELL-03**: sandflox generates function armor shell code shadowing 27+ package managers (flox, nix, brew, pip, npm, cargo, docker, etc.) with exit 126 and `[sandflox] BLOCKED:` messages
-- [ ] **SHELL-04**: sandflox generates fs-filter.sh wrapping write commands (cp, mv, mkdir, rm, rmdir, ln, chmod, tee) with path-checking functions that enforce writable/read-only/denied policy
-- [ ] **SHELL-05**: sandflox generates usercustomize.py that blocks `ensurepip` at import level and wraps `builtins.open` to enforce filesystem policy for Python code
-- [ ] **SHELL-06**: sandflox scrubs environment breadcrumbs (`FLOX_ENV_PROJECT`, `FLOX_ENV_DIRS`, `FLOX_PATH_PATCHED`) to prevent agent escape vector discovery
-- [ ] **SHELL-07**: sandflox conditionally removes `curl` from the symlink bin when `network.mode = "blocked"`
-- [ ] **SHELL-08**: shell enforcement generates agent-friendly `[sandflox] BLOCKED: <reason>` error messages that explain why an action was denied
+- [x] **SHELL-01**: sandflox wipes PATH to contain only the requisites-filtered symlink bin directory
+- [x] **SHELL-02**: sandflox parses the active requisites file and creates a symlink bin directory in `.flox/cache/sandflox/bin/` containing only listed tools from `$FLOX_ENV/bin`
+- [x] **SHELL-03**: sandflox generates function armor shell code shadowing 27+ package managers (flox, nix, brew, pip, npm, cargo, docker, etc.) with exit 126 and `[sandflox] BLOCKED:` messages
+- [x] **SHELL-04**: sandflox generates fs-filter.sh wrapping write commands (cp, mv, mkdir, rm, rmdir, ln, chmod, tee) with path-checking functions that enforce writable/read-only/denied policy
+- [x] **SHELL-05**: sandflox generates usercustomize.py that blocks `ensurepip` at import level and wraps `builtins.open` to enforce filesystem policy for Python code
+- [x] **SHELL-06**: sandflox scrubs environment breadcrumbs (`FLOX_ENV_PROJECT`, `FLOX_ENV_DIRS`, `FLOX_PATH_PATCHED`) to prevent agent escape vector discovery
+- [x] **SHELL-07**: sandflox conditionally removes `curl` from the symlink bin when `network.mode = "blocked"`
+- [x] **SHELL-08**: shell enforcement generates agent-friendly `[sandflox] BLOCKED: <reason>` error messages that explain why an action was denied
 
 ### Distribution
 
@@ -111,14 +111,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | KERN-06 | Phase 2 | Complete |
 | KERN-07 | Phase 2 | Complete |
 | KERN-08 | Phase 2 | Complete |
-| SHELL-01 | Phase 3 | Pending |
-| SHELL-02 | Phase 3 | Pending |
-| SHELL-03 | Phase 3 | Pending |
-| SHELL-04 | Phase 3 | Pending |
-| SHELL-05 | Phase 3 | Pending |
-| SHELL-06 | Phase 3 | Pending |
-| SHELL-07 | Phase 3 | Pending |
-| SHELL-08 | Phase 3 | Pending |
+| SHELL-01 | Phase 3 | Complete |
+| SHELL-02 | Phase 3 | Complete |
+| SHELL-03 | Phase 3 | Complete |
+| SHELL-04 | Phase 3 | Complete |
+| SHELL-05 | Phase 3 | Complete |
+| SHELL-06 | Phase 3 | Complete |
+| SHELL-07 | Phase 3 | Complete |
+| SHELL-08 | Phase 3 | Complete |
 | SEC-01 | Phase 4 | Pending |
 | SEC-02 | Phase 4 | Pending |
 | SEC-03 | Phase 4 | Pending |
