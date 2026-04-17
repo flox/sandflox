@@ -236,3 +236,157 @@ func TestValidateNoPolicyExitsWithError(t *testing.T) {
 		t.Errorf("expected error message in output, got:\n%s", output)
 	}
 }
+
+// ── Status output tests ─────────────────────────────────
+
+func TestStatusOutput(t *testing.T) {
+	// Create a project with cached state via WriteCache
+	projectDir := t.TempDir()
+	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+
+	// Write requisites file in project dir
+	reqContent := "bash\nsh\ngit\ncoreutils\n"
+	if err := os.WriteFile(filepath.Join(projectDir, "requisites.txt"), []byte(reqContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := &ResolvedConfig{
+		Profile:        "default",
+		NetMode:        "blocked",
+		FsMode:         "workspace",
+		Requisites:     "requisites.txt",
+		AllowLocalhost: true,
+		Denied:         []string{"/home/user/.ssh/", "/home/user/.aws/"},
+	}
+
+	if err := WriteCache(cacheDir, config, projectDir); err != nil {
+		t.Fatalf("WriteCache error: %v", err)
+	}
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	code := runStatusWithExitCode(cacheDir)
+	if code != 0 {
+		t.Fatalf("runStatus returned exit code %d, want 0. stderr: %s", code, buf.String())
+	}
+
+	output := buf.String()
+
+	if !strings.Contains(output, "[sandflox] Profile: default | Network: blocked | Filesystem: workspace") {
+		t.Errorf("expected profile summary line in output, got:\n%s", output)
+	}
+
+	if !strings.Contains(output, "[sandflox] Tools: 4 | Denied paths: 2") {
+		t.Errorf("expected tools/denied line in output, got:\n%s", output)
+	}
+}
+
+func TestStatusDebugOutput(t *testing.T) {
+	projectDir := t.TempDir()
+	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+
+	reqContent := "bash\nsh\n"
+	if err := os.WriteFile(filepath.Join(projectDir, "requisites.txt"), []byte(reqContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := &ResolvedConfig{
+		Profile:        "default",
+		NetMode:        "blocked",
+		FsMode:         "workspace",
+		Requisites:     "requisites.txt",
+		AllowLocalhost: true,
+		Writable:       []string{"/project"},
+		ReadOnly:       []string{"/project/.git/"},
+		Denied:         []string{"/home/.ssh/"},
+	}
+
+	if err := WriteCache(cacheDir, config, projectDir); err != nil {
+		t.Fatalf("WriteCache error: %v", err)
+	}
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	code := runStatusDebugWithExitCode(cacheDir)
+	if code != 0 {
+		t.Fatalf("runStatus (debug) returned exit code %d, want 0. stderr: %s", code, buf.String())
+	}
+
+	output := buf.String()
+
+	if !strings.Contains(output, "[sandflox] Requisites:") {
+		t.Errorf("expected requisites line in debug output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "[sandflox] Allow localhost: true") {
+		t.Errorf("expected allow-localhost line in debug output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "[sandflox] Writable paths:") {
+		t.Errorf("expected writable paths line in debug output, got:\n%s", output)
+	}
+}
+
+func TestStatusNoCache(t *testing.T) {
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	code := runStatusWithExitCode("")
+	if code != 1 {
+		t.Errorf("runStatus with no cache should return exit code 1, got %d", code)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "Not in a sandflox session") {
+		t.Errorf("expected 'Not in a sandflox session' in output, got:\n%s", output)
+	}
+}
+
+func TestDiscoverCacheDir(t *testing.T) {
+	// Test fallback path: cwd-relative
+	projectDir := t.TempDir()
+	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+
+	// Write requisites and config for WriteCache
+	if err := os.WriteFile(filepath.Join(projectDir, "requisites.txt"), []byte("bash\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	config := &ResolvedConfig{
+		Profile:    "default",
+		NetMode:    "blocked",
+		FsMode:     "workspace",
+		Requisites: "requisites.txt",
+	}
+	if err := WriteCache(cacheDir, config, projectDir); err != nil {
+		t.Fatal(err)
+	}
+
+	flags := &CLIFlags{PolicyPath: filepath.Join(projectDir, "policy.toml")}
+
+	got := discoverCacheDir(flags)
+	if got != cacheDir {
+		t.Errorf("discoverCacheDir fallback: got %q, want %q", got, cacheDir)
+	}
+
+	// Test env var path
+	envCacheDir := t.TempDir()
+	sandfloxCache := filepath.Join(envCacheDir, "sandflox")
+	if err := os.MkdirAll(sandfloxCache, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sandfloxCache, "config.json"), []byte(`{"profile":"test"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("FLOX_ENV_CACHE", envCacheDir)
+	got = discoverCacheDir(flags)
+	if got != sandfloxCache {
+		t.Errorf("discoverCacheDir env var: got %q, want %q", got, sandfloxCache)
+	}
+}

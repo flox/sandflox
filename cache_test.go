@@ -262,6 +262,80 @@ func TestCacheWriteNetBlockedFlagToggle(t *testing.T) {
 	}
 }
 
+// ── ReadCache Tests ──────────────────────────────────────
+
+func TestReadCacheRoundTrip(t *testing.T) {
+	cacheDir, projectDir := testCacheSetup(t)
+
+	original := &ResolvedConfig{
+		Profile:        "default",
+		NetMode:        "blocked",
+		FsMode:         "workspace",
+		Requisites:     "requisites.txt",
+		AllowLocalhost: true,
+		Writable:       []string{"/project", "/private/tmp"},
+		ReadOnly:       []string{"/project/.git/"},
+		Denied:         []string{"/home/user/.ssh/", "/home/user/.aws/"},
+	}
+
+	if err := WriteCache(cacheDir, original, projectDir); err != nil {
+		t.Fatalf("WriteCache error: %v", err)
+	}
+
+	got, err := ReadCache(cacheDir)
+	if err != nil {
+		t.Fatalf("ReadCache error: %v", err)
+	}
+
+	if got.Profile != original.Profile {
+		t.Errorf("Profile: got %q, want %q", got.Profile, original.Profile)
+	}
+	if got.NetMode != original.NetMode {
+		t.Errorf("NetMode: got %q, want %q", got.NetMode, original.NetMode)
+	}
+	if got.FsMode != original.FsMode {
+		t.Errorf("FsMode: got %q, want %q", got.FsMode, original.FsMode)
+	}
+	if got.AllowLocalhost != original.AllowLocalhost {
+		t.Errorf("AllowLocalhost: got %v, want %v", got.AllowLocalhost, original.AllowLocalhost)
+	}
+	if len(got.Writable) != len(original.Writable) {
+		t.Errorf("Writable: got %v, want %v", got.Writable, original.Writable)
+	}
+	if len(got.ReadOnly) != len(original.ReadOnly) {
+		t.Errorf("ReadOnly: got %v, want %v", got.ReadOnly, original.ReadOnly)
+	}
+	if len(got.Denied) != len(original.Denied) {
+		t.Errorf("Denied: got %v, want %v", got.Denied, original.Denied)
+	}
+}
+
+func TestReadCacheMissing(t *testing.T) {
+	_, err := ReadCache("/tmp/nonexistent-sandflox-test-" + t.Name())
+	if err == nil {
+		t.Fatal("expected error for missing cache dir, got nil")
+	}
+	if !strings.Contains(err.Error(), "cannot read cached config") {
+		t.Errorf("expected error containing 'cannot read cached config', got: %v", err)
+	}
+}
+
+func TestReadCacheCorrupt(t *testing.T) {
+	dir := t.TempDir()
+	// Write garbage to config.json
+	if err := os.WriteFile(filepath.Join(dir, "config.json"), []byte("not valid json{{{"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := ReadCache(dir)
+	if err == nil {
+		t.Fatal("expected error for corrupt config.json, got nil")
+	}
+	if !strings.Contains(err.Error(), "corrupt cached config") {
+		t.Errorf("expected error containing 'corrupt cached config', got: %v", err)
+	}
+}
+
 func TestCacheWriteRequisites(t *testing.T) {
 	cacheDir, projectDir := testCacheSetup(t)
 
