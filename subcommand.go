@@ -126,13 +126,86 @@ func runValidateWithExitCode(flags *CLIFlags) int {
 	return 0
 }
 
-// ── Status Handler (stub -- implemented in Task 2) ──────
+// ── Cache Discovery ─────────────────────────────────────
+
+// discoverCacheDir finds the sandflox cache directory containing config.json.
+// Tries FLOX_ENV_CACHE first (set inside a flox activate session), then
+// falls back to resolving from the project directory.
+// Returns "" if no cache is found.
+func discoverCacheDir(flags *CLIFlags) string {
+	// 1. Try FLOX_ENV_CACHE env var (set inside `flox activate`)
+	if envCache := os.Getenv("FLOX_ENV_CACHE"); envCache != "" {
+		candidate := filepath.Join(envCache, "sandflox")
+		if _, err := os.Stat(filepath.Join(candidate, "config.json")); err == nil {
+			return candidate
+		}
+	}
+
+	// 2. Fall back to project dir relative path
+	projectDir := resolveProjectDir(flags)
+	candidate := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+	if _, err := os.Stat(filepath.Join(candidate, "config.json")); err == nil {
+		return candidate
+	}
+
+	return ""
+}
+
+// ── Status Handler ──────────────────────────────────────
 
 // runStatus reads cached enforcement state and prints a summary.
-// Implemented in Task 2.
+// Exits 0 on success, 1 if not in a sandflox session.
 func runStatus(flags *CLIFlags) {
-	fmt.Fprintf(stderr, "[sandflox] ERROR: status not yet implemented\n")
-	os.Exit(1)
+	cacheDir := discoverCacheDir(flags)
+	os.Exit(runStatusInternal(cacheDir, flags.Debug))
+}
+
+// runStatusWithExitCode is the testable core of runStatus.
+// Takes the resolved cacheDir (or "" if no cache found).
+func runStatusWithExitCode(cacheDir string) int {
+	return runStatusInternal(cacheDir, false)
+}
+
+// runStatusDebugWithExitCode is the testable debug variant.
+func runStatusDebugWithExitCode(cacheDir string) int {
+	return runStatusInternal(cacheDir, true)
+}
+
+// runStatusInternal implements the status logic for both normal and debug modes.
+func runStatusInternal(cacheDir string, debug bool) int {
+	if cacheDir == "" {
+		fmt.Fprintf(stderr, "[sandflox] Not in a sandflox session -- no cached state found. Run 'sandflox' first.\n")
+		return 1
+	}
+
+	config, err := ReadCache(cacheDir)
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+
+	// Count tools from cached requisites
+	tools, err := ParseRequisites(filepath.Join(cacheDir, "requisites.txt"))
+	toolCount := 0
+	if err == nil {
+		toolCount = len(tools)
+	}
+
+	// Print status summary
+	fmt.Fprintf(stderr, "[sandflox] Profile: %s | Network: %s | Filesystem: %s\n",
+		config.Profile, config.NetMode, config.FsMode)
+	fmt.Fprintf(stderr, "[sandflox] Tools: %d | Denied paths: %d\n",
+		toolCount, len(config.Denied))
+
+	if debug {
+		fmt.Fprintf(stderr, "[sandflox] Requisites: %s\n", config.Requisites)
+		fmt.Fprintf(stderr, "[sandflox] Allow localhost: %v\n", config.AllowLocalhost)
+		fmt.Fprintf(stderr, "[sandflox] Writable paths: %v\n", config.Writable)
+		fmt.Fprintf(stderr, "[sandflox] Read-only paths: %v\n", config.ReadOnly)
+		fmt.Fprintf(stderr, "[sandflox] Denied paths: %v\n", config.Denied)
+	}
+
+	return 0
 }
 
 // ── Elevate Handler (stub -- future plan) ───────────────

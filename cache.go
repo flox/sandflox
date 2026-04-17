@@ -76,6 +76,22 @@ func WriteCache(cacheDir string, config *ResolvedConfig, projectDir string) erro
 	return nil
 }
 
+// ReadCache reads the cached config.json from cacheDir and returns the
+// deserialized ResolvedConfig. Returns an error if the cache directory
+// does not exist or config.json is missing/corrupt.
+func ReadCache(cacheDir string) (*ResolvedConfig, error) {
+	configPath := filepath.Join(cacheDir, "config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("[sandflox] ERROR: cannot read cached config: %w", err)
+	}
+	var config ResolvedConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("[sandflox] ERROR: corrupt cached config: %w", err)
+	}
+	return &config, nil
+}
+
 // writePathList writes a slice of paths to a file, one per line.
 func writePathList(path string, paths []string) error {
 	var buf strings.Builder
