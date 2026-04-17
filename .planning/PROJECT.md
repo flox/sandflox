@@ -33,7 +33,7 @@ AI agents cannot escape the sandbox — not through PATH manipulation, absolute 
 - [ ] Flox publish/install: `flox publish` to FloxHub, `flox install sandflox` into any project environment
 - ✓ Interactive mode: `sandflox` wraps `sandbox-exec ... flox activate` — sandboxed interactive shell with kernel enforcement (Phase 2)
 - ✓ Non-interactive mode: `sandflox -- CMD` wraps arbitrary commands under sandbox-exec (Phase 2 — shell enforcement still pending Phase 3)
-- [ ] Re-exec elevation: `sandflox elevate` from within a `flox activate` session re-execs the shell under sandbox-exec (one-time bounce)
+- ✓ Re-exec elevation: `sandflox elevate` from within a `flox activate` session re-execs the shell under sandbox-exec (one-time bounce) (Phase 5)
 - ✓ Policy parsing in Go: custom TOML subset parser with strict validation and line-numbered errors (Phase 1)
 - ✓ SBPL profile generation in Go: generate Apple Seatbelt profiles from policy — filesystem modes, network modes, denied paths (Phase 2)
 - ✓ Shell enforcement in Go: binary generates and applies PATH wipe, requisites symlink bin, function armor, fs-filter wrappers, breadcrumb cleanup as part of the activation it controls (Phase 3)
@@ -121,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-17 after Phase 4 completion — environment variable sanitization with allowlist-based filtering, credential prefix blocking, policy-configurable passthrough, Python safety flags, wired into both exec paths with 4 integration tests*
+*Last updated: 2026-04-17 after Phase 5 completion — subcommand routing (validate/status/elevate), dry-run policy inspection, cached state reader, re-exec elevation with session detection and nesting guard*
