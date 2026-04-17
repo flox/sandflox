@@ -214,6 +214,54 @@ func TestCacheWriteConfigJSON(t *testing.T) {
 	}
 }
 
+// ── Net-blocked.flag toggle test (D-04 stale cache purge) ──
+
+func TestCacheWriteNetBlockedFlagToggle(t *testing.T) {
+	cacheDir, projectDir := testCacheSetup(t)
+	flagPath := filepath.Join(cacheDir, "net-blocked.flag")
+
+	config := &ResolvedConfig{
+		Profile:    "default",
+		NetMode:    "blocked",
+		FsMode:     "workspace",
+		Requisites: "requisites.txt",
+	}
+
+	// Step 1: blocked -> flag must exist
+	if err := WriteCache(cacheDir, config, projectDir); err != nil {
+		t.Fatalf("WriteCache (blocked): %v", err)
+	}
+	if _, err := os.Stat(flagPath); os.IsNotExist(err) {
+		t.Fatal("net-blocked.flag should exist after blocked write")
+	}
+
+	// Step 2: flip to unrestricted -> flag must be REMOVED
+	config.NetMode = "unrestricted"
+	if err := WriteCache(cacheDir, config, projectDir); err != nil {
+		t.Fatalf("WriteCache (unrestricted): %v", err)
+	}
+	if _, err := os.Stat(flagPath); !os.IsNotExist(err) {
+		t.Fatal("net-blocked.flag should be removed after unrestricted write")
+	}
+
+	// Step 3: flip back to blocked -> flag must be RECREATED
+	config.NetMode = "blocked"
+	if err := WriteCache(cacheDir, config, projectDir); err != nil {
+		t.Fatalf("WriteCache (blocked again): %v", err)
+	}
+	if _, err := os.Stat(flagPath); os.IsNotExist(err) {
+		t.Fatal("net-blocked.flag should be recreated after second blocked write")
+	}
+
+	// Step 4: idempotency -- calling blocked again should not error
+	if err := WriteCache(cacheDir, config, projectDir); err != nil {
+		t.Fatalf("WriteCache (blocked idempotent): %v", err)
+	}
+	if _, err := os.Stat(flagPath); os.IsNotExist(err) {
+		t.Fatal("net-blocked.flag should still exist after idempotent write")
+	}
+}
+
 func TestCacheWriteRequisites(t *testing.T) {
 	cacheDir, projectDir := testCacheSetup(t)
 
