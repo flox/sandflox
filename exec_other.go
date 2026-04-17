@@ -12,9 +12,10 @@ import "fmt"
 // execWithKernelEnforcement is a non-darwin stub. Prints a WARNING diagnostic
 // indicating that kernel enforcement is unavailable on this platform, then
 // delegates to execFlox for the standard flox activate path.
-func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, userArgs []string) {
+func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, entrypointPath string, userArgs []string) {
 	_ = cfg
 	_ = projectDir
+	_ = entrypointPath
 	fmt.Fprintf(stderr, "[sandflox] WARNING: kernel enforcement only available on darwin -- falling back to shell-only\n")
 	execFlox(userArgs)
 }

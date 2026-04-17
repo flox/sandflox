@@ -61,7 +61,8 @@ func main() {
 	emitDiagnostics(config, projectDir, flags.Debug)
 
 	// 7. Exec into flox activate, wrapped in kernel enforcement when available
-	execWithKernelEnforcement(config, projectDir, userArgs)
+	entrypointPath := filepath.Join(cacheDir, "entrypoint.sh")
+	execWithKernelEnforcement(config, projectDir, entrypointPath, userArgs)
 }
 
 // ── Project Directory Resolution ────────────────────────
