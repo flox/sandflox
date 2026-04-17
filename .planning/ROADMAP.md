@@ -84,7 +84,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md -- Env sanitization engine (BuildSanitizedEnv + allowlist/blocklist constants) + policy [security] section + config EnvPassthrough + unit tests
-- [ ] 04-02-PLAN.md -- Wire into exec paths (exec_darwin.go, main.go, exec_other.go) + --debug env diagnostic + integration tests proving env scrubbing end-to-end
+- [x] 04-02-PLAN.md -- Wire into exec paths (exec_darwin.go, main.go, exec_other.go) + --debug env diagnostic + integration tests proving env scrubbing end-to-end
 
 ### Phase 5: Subcommands
 **Goal**: Users can inspect policy without executing (validate), check enforcement state (status), and elevate an existing flox session into the sandbox (elevate)
