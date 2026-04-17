@@ -57,11 +57,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 6. Emit diagnostics to stderr
+	// 6. Generate shell enforcement artifacts (D-04: regenerate every run)
+	if err := WriteShellArtifacts(cacheDir, config); err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	entrypointPath := filepath.Join(cacheDir, "entrypoint.sh")
+
+	// 7. Emit diagnostics to stderr
 	emitDiagnostics(config, projectDir, flags.Debug)
 
-	// 7. Exec into flox activate, wrapped in kernel enforcement when available
-	entrypointPath := filepath.Join(cacheDir, "entrypoint.sh")
+	// 8. Exec into flox activate, wrapped in kernel enforcement when available
 	execWithKernelEnforcement(config, projectDir, entrypointPath, userArgs)
 }
 
