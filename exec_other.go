@@ -7,7 +7,10 @@
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 // execWithKernelEnforcement is a non-darwin stub. Prints a WARNING diagnostic
 // indicating that kernel enforcement is unavailable on this platform, then
@@ -17,4 +20,15 @@ func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, entrypoin
 	_ = entrypointPath
 	fmt.Fprintf(stderr, "[sandflox] WARNING: kernel enforcement only available on darwin -- falling back to shell-only\n")
 	execFlox(cfg, userArgs)
+}
+
+// elevateExec is a non-darwin stub. Elevate requires macOS sandbox-exec
+// and cannot fall back to shell-only enforcement -- it exists specifically
+// to add kernel enforcement to an existing flox session. Hard error.
+func elevateExec(cfg *ResolvedConfig, projectDir, entrypointPath string) {
+	_ = cfg
+	_ = projectDir
+	_ = entrypointPath
+	fmt.Fprintf(stderr, "[sandflox] ERROR: elevate requires macOS sandbox-exec -- not available on this platform\n")
+	os.Exit(1)
 }

@@ -131,3 +131,84 @@ func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, entrypoin
 	fmt.Fprintf(stderr, "[sandflox] ERROR: sandbox-exec failed: %v\n", execErr)
 	os.Exit(1)
 }
+
+// ── Elevate argv builder (testable) ─────────────────────
+
+// buildElevateArgv constructs the argv slice for sandbox-exec wrapping
+// the current shell WITHOUT flox activate. Used by `sandflox elevate`
+// when the user is already inside `flox activate` and wants to add
+// kernel enforcement in-place.
+//
+// Pure function -- no I/O, no syscalls. Returns exactly 12 elements:
+//
+//	[0..8]   sandbox-exec -f <sbpl> -D PROJECT=... -D HOME=... -D FLOX_CACHE=...
+//	[9..11]  "bash", "--rcfile", entrypointPath, "-i"
+//
+// Differs from buildSandboxExecArgv by omitting flox activate -- the
+// user is already in a flox session.
+func buildElevateArgv(sbplPath, projectDir, home, floxCachePath, entrypointPath string) []string {
+	return []string{
+		"sandbox-exec",
+		"-f", sbplPath,
+		"-D", "PROJECT=" + projectDir,
+		"-D", "HOME=" + home,
+		"-D", "FLOX_CACHE=" + floxCachePath,
+		"bash", "--rcfile", entrypointPath, "-i",
+	}
+}
+
+// ── Elevate exec ────────────────────────────────────────
+
+// elevateExec re-execs the current shell under sandbox-exec on darwin.
+// Unlike execWithKernelEnforcement, elevate does NOT wrap flox activate
+// (user is already in a flox session). Requires sandbox-exec -- no
+// fallback, since elevate's purpose is kernel enforcement.
+//
+// Flow:
+//  1. LookPath("sandbox-exec"); hard error on miss (no fallback)
+//  2. UserHomeDir
+//  3. GenerateSBPL -> WriteSBPL
+//  4. Build argv via buildElevateArgv
+//  5. Sanitize env via BuildSanitizedEnv
+//  6. syscall.Exec (does not return on success)
+func elevateExec(cfg *ResolvedConfig, projectDir, entrypointPath string) {
+	// 1. Preflight: sandbox-exec is mandatory for elevate
+	sbxPath, err := exec.LookPath("sandbox-exec")
+	if err != nil {
+		fmt.Fprintf(stderr, "[sandflox] ERROR: sandbox-exec not found -- cannot elevate\n")
+		os.Exit(1)
+	}
+
+	// 2. Resolve home directory
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(stderr, "[sandflox] ERROR: cannot determine home directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 3. Generate and write SBPL profile
+	sbplContent := GenerateSBPL(cfg, home)
+	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+	sbplPath, err := WriteSBPL(cacheDir, sbplContent)
+	if err != nil {
+		fmt.Fprintf(stderr, "[sandflox] ERROR: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 4. Compute FLOX_CACHE path
+	floxCachePath := filepath.Join(home, ".cache", "flox")
+
+	// 5. Diagnostic
+	fmt.Fprintf(stderr, "[sandflox] Elevating to sandboxed shell (sandbox-exec)\n")
+
+	// 6. Build argv and exec
+	argv := buildElevateArgv(sbplPath, projectDir, home, floxCachePath, entrypointPath)
+
+	// Sanitize environment
+	env := BuildSanitizedEnv(cfg)
+
+	// syscall.Exec replaces the process; does not return on success
+	execErr := syscall.Exec(sbxPath, argv, env)
+	fmt.Fprintf(stderr, "[sandflox] ERROR: elevate failed: %v\n", execErr)
+	os.Exit(1)
+}

@@ -239,7 +239,7 @@ func TestBuildSandboxExecArgs_HandlesUserArgsWithDashes(t *testing.T) {
 
 // ── buildElevateArgv Tests ──────────────────────────────
 //
-// buildElevateArgv produces a 12-element argv for sandbox-exec wrapping
+// buildElevateArgv produces a 13-element argv for sandbox-exec wrapping
 // the current shell WITHOUT flox activate. Used by `sandflox elevate`
 // to re-exec an existing flox session under kernel enforcement.
 
@@ -262,8 +262,8 @@ func TestBuildElevateArgv_Interactive(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("argv mismatch\n got:  %v\n want: %v", got, want)
 	}
-	if len(got) != 12 {
-		t.Errorf("expected 12 elements, got %d: %v", len(got), got)
+	if len(got) != 13 {
+		t.Errorf("expected 13 elements, got %d: %v", len(got), got)
 	}
 }
 
@@ -275,13 +275,16 @@ func TestBuildElevateArgv_NoFloxActivate(t *testing.T) {
 		"/home/x/.cache/flox",
 		"/cache/entrypoint.sh",
 	)
-	for i, elem := range got {
-		lower := strings.ToLower(elem)
-		if strings.Contains(lower, "flox") {
-			t.Errorf("argv[%d] = %q contains 'flox' -- elevate argv must NOT include flox", i, elem)
+	// The flox binary and "activate" subcommand must not appear as
+	// standalone argv elements. -D KEY=VALUE params (FLOX_CACHE) are
+	// fine -- they're sandbox parameters, not the flox binary.
+	for _, elem := range got {
+		if elem == "flox" || elem == "activate" {
+			t.Errorf("argv contains standalone %q -- elevate argv must NOT invoke flox activate", elem)
 		}
-		if strings.Contains(lower, "activate") {
-			t.Errorf("argv[%d] = %q contains 'activate' -- elevate argv must NOT include activate", i, elem)
+		// Reject absolute paths to the flox binary, but skip -D params
+		if strings.HasSuffix(elem, "/flox") && !strings.Contains(elem, "=") {
+			t.Errorf("argv contains flox binary path %q -- elevate argv must NOT invoke flox", elem)
 		}
 	}
 }
