@@ -512,3 +512,208 @@ func TestShellEnforces_BlockedMessagesPrefix(t *testing.T) {
 		}
 	}
 }
+
+// ── SEC-01/02/03 env scrubbing helpers ──────────────────
+
+// runSandfloxProbeWithEnv invokes the cached sandflox binary with the given
+// bash probe script and extra environment variables. Identical to
+// runSandfloxProbe except it appends extraEnv to the subprocess environment
+// so the test can inject specific vars (e.g., AWS_SECRET_ACCESS_KEY) and
+// verify they are scrubbed inside the sandbox.
+func runSandfloxProbeWithEnv(t *testing.T, probeScript string, extraEnv ...string) (stdout, stderrOut string, exitCode int) {
+	t.Helper()
+	checkShellPrereqs(t)
+	binPath := getSandfloxBin(t)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, binPath, "--", "/bin/bash", "-c", probeScript)
+	cmd.Dir = cwd
+	cmd.Env = append(os.Environ(), extraEnv...)
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+	runErr := cmd.Run()
+
+	exitCode = 0
+	if ee, ok := runErr.(*exec.ExitError); ok {
+		exitCode = ee.ExitCode()
+	} else if runErr != nil {
+		t.Logf("runSandfloxProbeWithEnv: non-ExitError: %v", runErr)
+		exitCode = -1
+	}
+
+	return stdoutBuf.String(), stderrBuf.String(), exitCode
+}
+
+// runSandfloxWithFlags invokes the cached sandflox binary with CLI flags
+// before the -- separator. This allows testing --debug output and other
+// flag-dependent behavior in a real subprocess.
+func runSandfloxWithFlags(t *testing.T, flags []string, probeScript string, extraEnv ...string) (stdout, stderrOut string, exitCode int) {
+	t.Helper()
+	checkShellPrereqs(t)
+	binPath := getSandfloxBin(t)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	args := make([]string, 0, len(flags)+4)
+	args = append(args, flags...)
+	args = append(args, "--", "/bin/bash", "-c", probeScript)
+	cmd := exec.CommandContext(ctx, binPath, args...)
+	cmd.Dir = cwd
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+	runErr := cmd.Run()
+
+	exitCode = 0
+	if ee, ok := runErr.(*exec.ExitError); ok {
+		exitCode = ee.ExitCode()
+	} else if runErr != nil {
+		t.Logf("runSandfloxWithFlags: non-ExitError: %v", runErr)
+		exitCode = -1
+	}
+
+	return stdoutBuf.String(), stderrBuf.String(), exitCode
+}
+
+// ── Test 10: SEC-01 -- Essential env vars pass through ──
+
+func TestEnvScrubbing_AllowlistPassesEssentials(t *testing.T) {
+	// Verify that essential POSIX variables (HOME, TERM, USER) survive
+	// the sanitization pipeline and are present inside the sandbox.
+	// Uses only bash builtins (printf) -- no external commands needed.
+	probe := `printf "HOME=%s\n" "$HOME"
+printf "TERM=%s\n" "$TERM"
+printf "USER=%s\n" "$USER"
+printf "SHELL=%s\n" "$SHELL"
+`
+	stdout, _, exitCode := runSandfloxProbe(t, probe)
+	if exitCode != 0 {
+		t.Fatalf("probe exited %d; expected 0", exitCode)
+	}
+
+	// HOME must be non-empty
+	if !strings.Contains(stdout, "HOME=/") {
+		t.Errorf("HOME should start with / (an absolute path); got stdout=%q", stdout)
+	}
+	// TERM must be non-empty (set in all terminal sessions)
+	for _, line := range strings.Split(stdout, "\n") {
+		if line == "TERM=" {
+			t.Errorf("TERM is empty inside sandbox; expected a non-empty value")
+		}
+	}
+	// USER must be non-empty
+	for _, line := range strings.Split(stdout, "\n") {
+		if line == "USER=" {
+			t.Errorf("USER is empty inside sandbox; expected a non-empty value")
+		}
+	}
+}
+
+// ── Test 11: SEC-01/SEC-02 -- Sensitive vars blocked ────
+
+func TestEnvScrubbing_SensitiveVarsBlocked(t *testing.T) {
+	// Inject known-sensitive env vars into the subprocess environment and
+	// verify they are absent inside the sandbox. Uses printf (bash builtin).
+	probe := `printf "AWS=%s\n" "$AWS_SECRET_ACCESS_KEY"
+printf "GH=%s\n" "$GITHUB_TOKEN"
+printf "SSH=%s\n" "$SSH_AUTH_SOCK"
+printf "OPENAI=%s\n" "$OPENAI_API_KEY"
+printf "HOME=%s\n" "$HOME"
+`
+	stdout, _, exitCode := runSandfloxProbeWithEnv(t, probe,
+		"AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI",
+		"GITHUB_TOKEN=ghp_testtoken",
+		"SSH_AUTH_SOCK=/tmp/ssh-test",
+		"OPENAI_API_KEY=sk-test123",
+	)
+	if exitCode != 0 {
+		t.Fatalf("probe exited %d; expected 0", exitCode)
+	}
+
+	// Each sensitive var should be empty (scrubbed by BuildSanitizedEnv).
+	// printf "AWS=%s\n" with an unset/empty var produces "AWS=\n".
+	sensitiveChecks := map[string]string{
+		"AWS=\n":    "AWS_SECRET_ACCESS_KEY",
+		"GH=\n":    "GITHUB_TOKEN",
+		"SSH=\n":    "SSH_AUTH_SOCK",
+		"OPENAI=\n": "OPENAI_API_KEY",
+	}
+	for expected, varName := range sensitiveChecks {
+		if !strings.Contains(stdout, expected) {
+			t.Errorf("%s should be empty inside sandbox (expected %q in stdout); got stdout=%q",
+				varName, expected, stdout)
+		}
+	}
+
+	// HOME must still pass through (sanity check)
+	if !strings.Contains(stdout, "HOME=/") {
+		t.Errorf("HOME should still be set inside sandbox; got stdout=%q", stdout)
+	}
+}
+
+// ── Test 12: SEC-03 -- Python safety flags forced ───────
+
+func TestEnvScrubbing_PythonSafetyFlags(t *testing.T) {
+	// Verify that PYTHONDONTWRITEBYTECODE=1 and PYTHON_NOPIP=1 are
+	// set inside the sandbox. These are forced by both BuildSanitizedEnv
+	// (Go-level) and entrypoint.sh (shell-level) for defense-in-depth.
+	probe := `printf "PYDWB=%s\n" "$PYTHONDONTWRITEBYTECODE"
+printf "PYNP=%s\n" "$PYTHON_NOPIP"
+`
+	stdout, _, exitCode := runSandfloxProbe(t, probe)
+	if exitCode != 0 {
+		t.Fatalf("probe exited %d; expected 0", exitCode)
+	}
+
+	if !strings.Contains(stdout, "PYDWB=1") {
+		t.Errorf("PYTHONDONTWRITEBYTECODE should be '1' inside sandbox; got stdout=%q", stdout)
+	}
+	if !strings.Contains(stdout, "PYNP=1") {
+		t.Errorf("PYTHON_NOPIP should be '1' inside sandbox; got stdout=%q", stdout)
+	}
+}
+
+// ── Test 13: SEC-02 -- Debug env diagnostic output ──────
+
+func TestEnvScrubbing_DebugDiagnostic(t *testing.T) {
+	// Invoke sandflox with --debug and verify that the env scrubbing
+	// diagnostic line appears in stderr with the expected format:
+	//   [sandflox] Env: N vars passed, M blocked, K forced
+	stdout, stderrOut, exitCode := runSandfloxWithFlags(t,
+		[]string{"--debug"}, `echo ok`)
+	if exitCode != 0 {
+		t.Fatalf("probe exited %d; expected 0; stdout=%q stderr=%q", exitCode, stdout, stderrOut)
+	}
+
+	if !strings.Contains(stderrOut, "[sandflox] Env:") {
+		t.Errorf("expected '[sandflox] Env:' in debug stderr; got stderr=%q", stderrOut)
+	}
+	if !strings.Contains(stderrOut, "vars passed") {
+		t.Errorf("expected 'vars passed' in debug stderr; got stderr=%q", stderrOut)
+	}
+	if !strings.Contains(stderrOut, "blocked") {
+		t.Errorf("expected 'blocked' in debug stderr; got stderr=%q", stderrOut)
+	}
+	if !strings.Contains(stderrOut, "forced") {
+		t.Errorf("expected 'forced' in debug stderr; got stderr=%q", stderrOut)
+	}
+}
