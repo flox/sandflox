@@ -9,6 +9,7 @@ buildGoModule {
     fileset = lib.fileset.unions [
       (lib.fileset.fileFilter (file: lib.hasSuffix ".go" file.name) ../../.)
       ../../go.mod
+      ../../templates  # //go:embed templates/*.tmpl -- shell enforcement templates
     ];
   };
 
