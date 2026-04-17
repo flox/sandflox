@@ -80,10 +80,11 @@ Plans:
   1. Inside the sandbox, `echo $AWS_SECRET_ACCESS_KEY` and `echo $GITHUB_TOKEN` are empty even when set in the parent shell
   2. Inside the sandbox, `echo $HOME` and `echo $TERM` are correctly set (allowlisted vars pass through)
   3. Inside the sandbox, `python3 -c "import ensurepip"` fails and `PYTHONDONTWRITEBYTECODE` is set to `1`
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md -- Env sanitization engine (BuildSanitizedEnv + allowlist/blocklist constants) + policy [security] section + config EnvPassthrough + unit tests
+- [ ] 04-02-PLAN.md -- Wire into exec paths (exec_darwin.go, main.go, exec_other.go) + --debug env diagnostic + integration tests proving env scrubbing end-to-end
 
 ### Phase 5: Subcommands
 **Goal**: Users can inspect policy without executing (validate), check enforcement state (status), and elevate an existing flox session into the sandbox (elevate)
@@ -123,6 +124,6 @@ Note: Phase 3 depends on Phase 1 (not Phase 2), so Phases 2 and 3 could theoreti
 | 1. Go Scaffold, Policy Engine, and Build Validation | 0/3 | Planning complete | - |
 | 2. Kernel Enforcement (SBPL + sandbox-exec) | 3/3 | Complete   | 2026-04-16 |
 | 3. Shell Enforcement Artifacts | 0/3 | Planning complete | - |
-| 4. Security Hardening | 0/1 | Not started | - |
+| 4. Security Hardening | 0/2 | Planning complete | - |
 | 5. Subcommands | 0/2 | Not started | - |
 | 6. Distribution and Polish | 0/1 | Not started | - |
