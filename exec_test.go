@@ -236,3 +236,101 @@ func TestBuildSandboxExecArgs_HandlesUserArgsWithDashes(t *testing.T) {
 		t.Errorf("expected exactly 2 '-c' tokens, got %d: %v", cCount, got)
 	}
 }
+
+// ── buildElevateArgv Tests ──────────────────────────────
+//
+// buildElevateArgv produces a 12-element argv for sandbox-exec wrapping
+// the current shell WITHOUT flox activate. Used by `sandflox elevate`
+// to re-exec an existing flox session under kernel enforcement.
+
+func TestBuildElevateArgv_Interactive(t *testing.T) {
+	got := buildElevateArgv(
+		"/cache/sandflox.sb",
+		"/proj",
+		"/home/x",
+		"/home/x/.cache/flox",
+		"/cache/entrypoint.sh",
+	)
+	want := []string{
+		"sandbox-exec",
+		"-f", "/cache/sandflox.sb",
+		"-D", "PROJECT=/proj",
+		"-D", "HOME=/home/x",
+		"-D", "FLOX_CACHE=/home/x/.cache/flox",
+		"bash", "--rcfile", "/cache/entrypoint.sh", "-i",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("argv mismatch\n got:  %v\n want: %v", got, want)
+	}
+	if len(got) != 12 {
+		t.Errorf("expected 12 elements, got %d: %v", len(got), got)
+	}
+}
+
+func TestBuildElevateArgv_NoFloxActivate(t *testing.T) {
+	got := buildElevateArgv(
+		"/cache/sandflox.sb",
+		"/proj",
+		"/home/x",
+		"/home/x/.cache/flox",
+		"/cache/entrypoint.sh",
+	)
+	for i, elem := range got {
+		lower := strings.ToLower(elem)
+		if strings.Contains(lower, "flox") {
+			t.Errorf("argv[%d] = %q contains 'flox' -- elevate argv must NOT include flox", i, elem)
+		}
+		if strings.Contains(lower, "activate") {
+			t.Errorf("argv[%d] = %q contains 'activate' -- elevate argv must NOT include activate", i, elem)
+		}
+	}
+}
+
+func TestBuildElevateArgv_HasEntrypoint(t *testing.T) {
+	entrypoint := "/cache/entrypoint.sh"
+	got := buildElevateArgv(
+		"/cache/sandflox.sb",
+		"/proj",
+		"/home/x",
+		"/home/x/.cache/flox",
+		entrypoint,
+	)
+	foundRcfile := false
+	for i, elem := range got {
+		if elem == "--rcfile" {
+			foundRcfile = true
+			if i+1 >= len(got) {
+				t.Fatalf("--rcfile at index %d has no following element", i)
+			}
+			if got[i+1] != entrypoint {
+				t.Errorf("--rcfile followed by %q, want %q", got[i+1], entrypoint)
+			}
+			break
+		}
+	}
+	if !foundRcfile {
+		t.Errorf("argv does not contain --rcfile: %v", got)
+	}
+}
+
+func TestBuildElevateArgv_SandboxExecParams(t *testing.T) {
+	got := buildElevateArgv(
+		"/cache/sandflox.sb",
+		"/proj",
+		"/home/x",
+		"/home/x/.cache/flox",
+		"/cache/entrypoint.sh",
+	)
+	if got[0] != "sandbox-exec" {
+		t.Errorf("argv[0] = %q, want \"sandbox-exec\"", got[0])
+	}
+	if got[1] != "-f" {
+		t.Errorf("argv[1] = %q, want \"-f\"", got[1])
+	}
+	if got[3] != "-D" {
+		t.Errorf("argv[3] = %q, want \"-D\"", got[3])
+	}
+	if !strings.HasPrefix(got[4], "PROJECT=") {
+		t.Errorf("argv[4] = %q, want prefix \"PROJECT=\"", got[4])
+	}
+}
