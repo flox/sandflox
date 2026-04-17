@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# sandflox fs-filter -- generated shell enforcement
+# Wraps write commands with path checks for clear error messages
+{{if eq .FsMode "permissive"}}
+# sandflox fs-filter -- permissive mode, no enforcement
+return 0 2>/dev/null || exit 0
+{{else}}
+# ── SHELL-04: Write-command path-check function ─────────
+
+_sfx_check_write_target() {
+  local target="$1"
+  local resolved
+  resolved="$(cd "$(dirname "$target")" 2>/dev/null && pwd)/$(basename "$target")" 2>/dev/null || resolved="$target"
+
+  # Check denied paths
+{{range .Denied}}  case "$resolved" in {{. | shellquote}}|{{. | shellquote}}/*) echo "[sandflox] BLOCKED: write to {{.}} is denied by policy" >&2; return 126;; esac
+{{end}}
+{{if eq .FsMode "strict"}}  # Strict mode: all writes blocked
+  echo "[sandflox] BLOCKED: filesystem is read-only (strict mode)" >&2
+  return 126
+{{else}}  # Check writable paths
+  local _allowed=0
+{{range .Writable}}  case "$resolved" in {{. | shellquote}}|{{. | shellquote}}/*) _allowed=1;; esac
+{{end}}  if [ "$_allowed" -eq 0 ]; then
+    echo "[sandflox] BLOCKED: write to \"$target\" outside workspace policy" >&2
+    return 126
+  fi
+
+  # Check read-only overrides
+{{range .ReadOnly}}  case "$resolved" in {{. | shellquote}}|{{. | shellquote}}/*) echo "[sandflox] BLOCKED: \"$target\" is read-only by policy" >&2; return 126;; esac
+{{end}}{{end}}  return 0
+}
+
+# ── Write-command wrappers ───────────────────────────────
+
+{{range .WriteCmds}}_sfx_real_{{.}}="$(command -v {{.}} 2>/dev/null)"
+{{.}}() {
+  local _last_arg="${!#}"
+  _sfx_check_write_target "$_last_arg" || return 126
+  "$_sfx_real_{{.}}" "$@"
+}
+export -f {{.}}
+
+{{end}}{{end}}
