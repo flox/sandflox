@@ -1,0 +1,491 @@
+sandflox v1.0 — Manual Test Plan                                                                    
+                                                                                                    
+  Prerequisites                                                                                       
+                                                                                                    
+  - Fresh terminal, outside the sandflox project
+  - flox installed (1.10+)
+  - A directory with policy.toml available
+  - Flox environment must include supporting packages that sandflox will whitelist.
+    The FloxHub package provides only the sandflox binary; tools like bash, coreutils,
+    python3, jq, curl, git must be installed separately:
+      flox install bash coreutils python3 jq curl git gnugrep gnused gawk findutils diffutils file
+  - Copy requisites files (requisites.txt, requisites-minimal.txt, requisites-full.txt)
+    from the sandflox source repo into the test project directory alongside policy.toml
+
+  1. Install from FloxHub
+
+  cd /tmp && mkdir sfx-test && cd sfx-test && flox init
+  flox install 8BitTacoSupreme/sandflox
+  flox activate -- which sandflox  # expect /nix/store/... path
+
+  2. Validate (CMD-01)
+
+  cp ~/sandflox/policy.toml .
+  flox activate -- sandflox validate -policy policy.toml
+  # expect: profile, fs mode, net mode, denied paths, tool count — no sandbox launched
+
+  3. Validate with debug (CORE-05/06)
+
+  flox activate -- sandflox validate -policy policy.toml -debug
+  # expect: [sandflox] prefixed diagnostics, SBPL rule count, cache artifacts written
+
+  4. Default sandbox launch (KERN-01, SHELL-01..03)
+
+  flox activate -- sandflox -policy policy.toml
+  # inside sandbox:
+  echo $PATH              # only sandflox symlink bin dir
+  which pip               # not found
+  pip install foo          # [sandflox] BLOCKED: ...
+  exit
+
+  5. Non-interactive command (KERN-06)
+
+  flox activate -- sandflox -policy policy.toml -- echo "hello from sandbox"
+  # expect: "hello from sandbox", clean exit
+
+  6. Network blocking (KERN-07/08)
+
+  # with policy.toml network.mode = "blocked":
+  flox activate -- sandflox -policy policy.toml -- curl https://example.com
+  # expect: kernel-level failure (Operation not permitted)
+
+  7. Filesystem enforcement (KERN-02/03, SHELL-04)
+
+  flox activate -- sandflox -policy policy.toml
+  # inside sandbox:
+  touch /tmp/allowed.txt        # should succeed (workspace)
+  cp /etc/hosts /tmp/stolen     # [sandflox] BLOCKED by fs-filter
+  exit
+
+  8. Env sanitization (SEC-01/02)
+
+  export AWS_SECRET_ACCESS_KEY=leaked
+  flox activate -- sandflox -policy policy.toml -- printenv AWS_SECRET_ACCESS_KEY
+  # expect: empty (scrubbed)
+  flox activate -- sandflox -policy policy.toml -- printenv HOME
+  # expect: /Users/jhogan (allowlisted)
+  unset AWS_SECRET_ACCESS_KEY
+
+  9. Profile override (CORE-03)
+
+  flox activate -- sandflox -policy policy.toml -profile minimal
+  # expect: reduced tool set (~28 tools)
+
+  10. Status from inside sandbox (CMD-02)
+
+  flox activate -- sandflox -policy policy.toml
+  # inside sandbox:
+  sandflox status
+  # expect: active profile, blocked paths, allowed tools, net mode
+  exit
+
+  11. Elevate (CMD-03)
+
+  flox activate   # plain flox, no sandbox
+  sandflox elevate -policy ~/sandflox/policy.toml
+  # expect: re-execs under sandbox-exec
+  sandflox elevate -policy ~/sandflox/policy.toml
+  # expect: "already sandboxed" message
+  exit
+
+  12. Clean up
+
+  # Ensure no sandbox processes are still running (active flox sessions
+  # hold locks on .flox/run/ and will prevent deletion)
+  ps aux | grep -E 'sandbox-exec|sandflox' | grep -v grep
+  # If any processes appear, exit them first, then:
+  cd /tmp && rm -rf sfx-test
+
+  Pass Criteria
+
+  All 11 scenarios behave as described. No kernel panics, no orphan processes, no credential leaks.
+
+  ──────────────────────────────────────────────────────────
+
+  flox-sbx Consumer Environment Tests
+
+  These tests validate the two-tier enforcement model:
+    Tier 1 — Shell-level: active on `flox activate` (default posture)
+    Tier 2 — Kernel-level: added by `sandflox elevate` (shields up)
+
+  Workspace mode (filesystem = "workspace") applies at BOTH tiers:
+    Shell: fs-filter.sh wraps write commands → exit 126 + BLOCKED message
+    Kernel: SBPL deny file-write* → OS EPERM
+
+  Prerequisites (flox-sbx)
+
+  - Fresh terminal
+  - flox 1.10+ installed
+  - sandflox published to FloxHub (8BitTacoSupreme/sandflox)
+  - cd environments/flox-sbx (contains manifest.toml + policy.toml)
+
+  ── Tier 1: Shell-Level (Default Posture) ─────────────────
+
+  13. Activate and verify PATH wipe
+
+  cd environments/flox-sbx && flox activate
+  echo $PATH                 # expect: .../sandflox/bin (symlink dir only)
+  which ls                   # expect: path inside sandflox/bin, NOT /usr/bin/ls
+  which sudo                 # expect: not found (not in requisites)
+  which bash                 # expect: found (in requisites)
+  env | grep SANDFLOX        # expect: SANDFLOX_ENABLED=1, SANDFLOX_MODE=enforced
+
+  14. Function armor blocks package managers
+
+  pip install requests       # expect: [sandflox] BLOCKED: pip is not available. exit 126
+  npm install express        # expect: [sandflox] BLOCKED: npm ...
+  brew install wget          # expect: [sandflox] BLOCKED: brew ...
+  docker run hello-world     # expect: [sandflox] BLOCKED: docker ...
+  flox install curl          # expect: [sandflox] BLOCKED: flox ...
+  nix-shell -p wget          # expect: [sandflox] BLOCKED: nix-shell ...
+  go get github.com/foo/bar  # expect: [sandflox] BLOCKED: go ...
+
+  15. Filesystem write enforcement (workspace mode — shell tier)
+
+  touch /tmp/test.txt        # expect: succeeds (writable path)
+  mkdir /tmp/sfx-test-dir    # expect: succeeds
+  echo test > ./testfile     # expect: succeeds (project dir is writable)
+  cp ./testfile .git/x       # expect: [sandflox] BLOCKED: .git/ is read-only
+  echo bad > policy.toml     # expect: [sandflox] BLOCKED: policy.toml is read-only
+  touch ~/.ssh/pwned         # expect: [sandflox] BLOCKED: denied path
+  rm -rf /etc                # expect: [sandflox] BLOCKED: outside workspace
+  # clean up:
+  rm -f ./testfile /tmp/test.txt && rmdir /tmp/sfx-test-dir
+
+  16. Python enforcement
+
+  python3 -c "import ensurepip"
+  # expect: SystemExit("[sandflox] BLOCKED: ensurepip is disabled in this sandbox")
+
+  python3 -c "open('/etc/passwd', 'w')"
+  # expect: PermissionError("[sandflox] BLOCKED: write to '/etc/passwd' outside workspace")
+
+  python3 -c "open('/tmp/ok.txt', 'w').write('hello')"
+  # expect: succeeds (/tmp is writable)
+  rm -f /tmp/ok.txt
+
+  17. curl removed when network=blocked
+
+  which curl                 # expect: not found (policy.toml network.mode = "blocked")
+  # To verify curl is actually absent, not just hidden:
+  command -v curl            # expect: empty / exit 1
+
+  18. Breadcrumb cleanup
+
+  echo $FLOX_ENV_PROJECT     # expect: empty (unset)
+  echo $FLOX_ENV_DIRS        # expect: empty (unset)
+  echo $FLOX_PATH_PATCHED    # expect: empty (unset)
+
+  19. sandflox status from inside shell enforcement
+
+  sandflox status
+  # expect: Profile: default | Network: blocked | Filesystem: workspace
+  # expect: Tools: N | Denied paths: 5
+
+  exit  # leave flox-sbx shell
+
+  ── Tier 2: Kernel-Level (Shields Up) ─────────────────────
+
+  20. Elevate to kernel enforcement
+
+  cd environments/flox-sbx && flox activate
+  sandflox elevate -policy policy.toml
+  # expect: "[sandflox] Elevating to sandboxed shell (sandbox-exec)"
+  # expect: "[sandflox] Sandbox active: N tools (profile: default)"
+
+  21. Kernel network blocking (not just PATH removal)
+
+  # Inside elevated shell:
+  # Even if an agent compiles a binary that opens a socket, it's blocked:
+  python3 -c "import urllib.request; urllib.request.urlopen('http://example.com')"
+  # expect: kernel EPERM / socket error (not just "curl not found")
+  # The key difference: shell-only removes curl from PATH but can't block
+  # raw socket() syscalls. Kernel tier denies the syscall itself.
+
+  22. Kernel denied-path read blocking
+
+  cat ~/.ssh/id_rsa          # expect: EPERM (kernel blocks even reads)
+  cat ~/.aws/credentials     # expect: EPERM
+  # Shell-only CANNOT block reads — only kernel tier denies file-read*.
+
+  23. Kernel workspace write enforcement (EPERM)
+
+  touch /usr/local/pwned     # expect: EPERM (not [sandflox] BLOCKED:)
+  echo bad > ~/.bashrc       # expect: EPERM (outside workspace)
+  touch ./kernel-ok.txt      # expect: succeeds (project dir writable)
+  rm -f ./kernel-ok.txt
+  # Key difference from shell: kernel returns OS-level EPERM with no
+  # custom message, while shell returns exit 126 with [sandflox] BLOCKED:
+
+  24. Env sanitization at kernel exec
+
+  # From OUTSIDE flox-sbx, set a credential:
+  exit  # leave elevated shell
+  exit  # leave flox shell
+  export AWS_SECRET_ACCESS_KEY=leaked
+  cd environments/flox-sbx && flox activate
+  sandflox elevate -policy policy.toml
+  printenv AWS_SECRET_ACCESS_KEY  # expect: empty (scrubbed at exec)
+  printenv HOME                   # expect: present (allowlisted)
+  printenv SANDFLOX_ENABLED       # expect: 1 (allowlisted)
+  unset AWS_SECRET_ACCESS_KEY
+  exit  # leave elevated shell
+  exit  # leave flox shell
+
+  ── Cross-Tier Tests ──────────────────────────────────────
+
+  25. Workspace enforcement at BOTH tiers
+
+  cd environments/flox-sbx && flox activate
+  # Shell tier:
+  cp /etc/hosts /tmp/hosts-copy   # expect: [sandflox] BLOCKED
+  # Elevate:
+  sandflox elevate -policy policy.toml
+  # Kernel tier (same policy, different enforcement mechanism):
+  cp /etc/hosts /tmp/hosts-copy   # expect: BLOCKED (kernel or shell, both active)
+  touch .git/pwned                # expect: BLOCKED (read-only at both tiers)
+  exit
+  exit
+
+  26. Elevate re-entry detection
+
+  cd environments/flox-sbx && flox activate
+  sandflox elevate -policy policy.toml
+  # Inside elevated shell, try to elevate again:
+  sandflox elevate
+  # expect: "[sandflox] Already sandboxed -- nothing to do." exit 0
+  exit
+  exit
+
+  27. Graceful degradation (no policy.toml)
+
+  cd /tmp && mkdir sfx-degrade-test && cd sfx-degrade-test
+  # Copy only the manifest, no policy.toml:
+  mkdir -p .flox/env
+  cp ~/sandflox/environments/flox-sbx/.flox/env/manifest.toml .flox/env/
+  flox activate
+  # expect: WARNING about missing policy.toml
+  # expect: fallback enforcement (function armor + PATH restriction still active)
+  pip install foo       # expect: [sandflox] BLOCKED (fallback armor)
+  echo $PATH            # expect: only $FLOX_ENV/bin
+  exit
+  cd /tmp && rm -rf sfx-degrade-test
+
+  28. Clean up (flox-sbx)
+
+  # Ensure no sandbox processes remain:
+  ps aux | grep -E 'sandbox-exec|sandflox' | grep -v grep
+  # If any appear, exit them first.
+
+  Pass Criteria (flox-sbx)
+
+  All tests 13-28 behave as described.
+  - Shell-only (13-19): agents blocked from reaching package managers,
+    writing outside workspace, bootstrapping pip, or discovering escape paths.
+  - Kernel (20-24): agents stopped from raw socket calls, reading credentials,
+    mutating host filesystem, or inheriting leaked env vars.
+  - Cross-tier (25-28): workspace policy consistent across both tiers,
+    re-entry safe, graceful degradation works.
+
+  ──────────────────────────────────────────────────────────
+
+  TODO (flox-sbx) — original items
+
+  [ ] Verify FloxHub package syntax: sandflox.pkg-path = "8BitTacoSupreme/sandflox"
+      vs sandflox.pkg-group — test with `flox install` against Flox 1.10+
+  [ ] claude-code packaging: determine if available as Flox/Nix package;
+      if not, document `npm install -g @anthropic/claude-code` pre-activation step
+      (must happen before function armor blocks npm)
+  [ ] Update .flox/pkgs/sandflox.nix fileset to include requisites*.txt for
+      //go:embed (currently only includes .go, go.mod, templates/)
+  [ ] Integration test: full `cd environments/flox-sbx && flox activate` cycle
+      on a clean machine (verify FloxHub resolution, package install, hook+profile)
+  [ ] Test on macOS versions: Ventura (13), Sonoma (14), Sequoia (15) —
+      sandbox-exec behavior may vary
+  [ ] Verify elevate works from flox-sbx (FLOX_ENV_CACHE routing correct)
+  [ ] Test SANDFLOX_POLICY_PATH override for custom policy locations
+  [ ] Verify sandflox prepare embedded requisites work when no local
+      requisites*.txt files exist (consumer env scenario)
+
+  ──────────────────────────────────────────────────────────
+
+  TODO (TESTPLAN audit — 2026-04-17)
+
+  Bugs and failures found by walking each test against the implementation.
+
+  ── CODE BUGS (fix in Go/templates) ───────────────────────
+
+  [B1] CRITICAL: `sandflox elevate` re-entry check blocks first-time
+       elevation from flox-sbx.
+
+       The manifest [vars] sets SANDFLOX_ENABLED="1" on `flox activate`.
+       checkElevatePrereqs() (subcommand.go:222) sees this and returns
+       "Already sandboxed -- nothing to do." BEFORE kernel enforcement is
+       added. The check cannot distinguish shell-only from kernel-level.
+
+       Impact: Tests 20-26 ALL FAIL. Elevate never fires from flox-sbx.
+
+       Fix: introduce SANDFLOX_SANDBOX (or SANDFLOX_KERNEL) env var, set
+       only inside the syscall.Exec env in elevateExec/execWithKernelEnforcement.
+       Change checkElevatePrereqs to check SANDFLOX_SANDBOX instead of
+       SANDFLOX_ENABLED. Keep SANDFLOX_ENABLED for informational purposes.
+
+       Files: subcommand.go:220-230, exec_darwin.go:207-208, env.go:24
+
+  [B2] elevateExec writes SBPL to projectDir-relative cache, but
+       runElevateWithExitCode writes other artifacts to $FLOX_ENV_CACHE.
+
+       elevateExec (exec_darwin.go:191) hardcodes:
+         cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+       But runElevateWithExitCode (subcommand.go:269-272) uses:
+         cacheDir = filepath.Join(floxEnvCache, "sandflox")
+
+       For project-local flox envs these happen to be the same path, but
+       for remote/FloxHub envs they diverge. The SBPL file ends up in a
+       different directory than entrypoint.sh.
+
+       Fix: pass the resolved cacheDir into elevateExec instead of
+       recomputing it from projectDir.
+
+       Files: exec_darwin.go:191, subcommand.go:268-272
+
+  ── TEST BUGS (fix in TESTPLAN.txt) ───────────────────────
+
+  [T1] Tests 13, 17: `which` is not in requisites.txt.
+
+       After PATH wipe, `which` is not available (it's /usr/bin/which,
+       not a bash builtin). Tests would get "which: command not found"
+       instead of the intended output.
+
+       Fix: replace `which <tool>` with `command -v <tool>` (bash builtin).
+
+  [T2] Test 15: `touch` is not a wrapped write command.
+
+       fs-filter wraps 8 commands: cp, mv, mkdir, rm, rmdir, ln, chmod, tee.
+       `touch` is NOT in that list (see shell.go:43).
+
+       Affected lines:
+         touch /tmp/test.txt     — succeeds, but NOT because fs-filter allows it;
+                                   touch bypasses fs-filter entirely
+         touch ~/.ssh/pwned      — expected BLOCKED but WON'T BE; touch goes
+                                   straight to the real binary unfiltered
+
+       Fix: replace `touch ~/.ssh/pwned` with `mkdir ~/.ssh/pwned` (mkdir
+       IS wrapped). Replace `touch /tmp/test.txt` with `tee /tmp/test.txt
+       <<< "test"` to actually exercise fs-filter.
+
+  [T3] Test 15: `echo bad > policy.toml` uses shell redirection.
+
+       Shell I/O redirection (>) is handled by bash internally before any
+       command runs. fs-filter cannot intercept it. The write would SUCCEED
+       at shell level.
+
+       Fix: replace with `tee policy.toml <<< "bad"` or
+       `cp /dev/null policy.toml` — both use wrapped commands.
+
+  [T4] Test 15: `echo test > ./testfile` — same shell redirection issue.
+
+       This happens to produce the correct result (file gets written) but
+       doesn't exercise fs-filter at all. Weak test.
+
+       Fix: use `tee ./testfile <<< "test"` to exercise the fs-filter
+       writable-path check (should succeed — project dir is writable).
+
+  [T5] Test 25: `cp /etc/hosts /tmp/hosts-copy` succeeds at both tiers.
+
+       fs-filter checks the LAST argument (target): /tmp/hosts-copy.
+       /tmp is writable by policy. At kernel level, /private/tmp is in
+       the SBPL allow list. So the copy SUCCEEDS at both tiers.
+
+       Impact: test claims "expect: [sandflox] BLOCKED" but it won't be.
+
+       Fix: use a non-writable target:
+         cp /etc/hosts /usr/local/stolen   — BLOCKED at shell + kernel
+       Or use a denied-path target:
+         cp /etc/hosts ~/.ssh/stolen       — BLOCKED at both tiers
+
+  [T6] Test 25: `touch .git/pwned` — touch is not wrapped (same as T2).
+
+       Fix: replace with `mkdir .git/pwned` or `tee .git/pwned <<< x`.
+
+  [T7] Test 15: `cp ./testfile .git/x` — path resolution may fail.
+
+       environments/flox-sbx/ is not a git repo. If .git/ doesn't exist
+       on disk, _sfx_check_write_target can't resolve ".git/x" to an
+       absolute path. Falls back to the raw string ".git/x", which doesn't
+       match the absolute read-only path. Result: BLOCKED with "outside
+       workspace policy" message instead of "read-only by policy".
+
+       The command IS blocked (correct), but the message differs from
+       the expect comment. For a clean test, ensure .git/ exists:
+         mkdir -p .git  # setup step before test 15
+       Or use a read-only path that DOES exist, like .flox/env/:
+         cp ./testfile .flox/env/x   # .flox/env/ exists and is read-only
+
+  ── WORDING / COSMETIC (fix expect comments) ──────────────
+
+  [W1] Test 14: message says "Environment is immutable.", not "exit 126".
+
+       Actual: [sandflox] BLOCKED: pip is not available. Environment is immutable.
+       Test:   # expect: [sandflox] BLOCKED: pip is not available. exit 126
+
+       The return code IS 126, but it's not in the message text.
+       Fix: change comment to:
+         # expect: [sandflox] BLOCKED: pip is not available. Environment is immutable.
+         # exit code: 126
+
+  [W2] Test 15: expected messages don't match actual format.
+
+       fs-filter actual messages (from templates/fs-filter.sh.tmpl):
+         Denied:    [sandflox] BLOCKED: write to <path> is denied by policy
+         Workspace: [sandflox] BLOCKED: write to "<target>" outside workspace policy
+         Read-only: [sandflox] BLOCKED: "<target>" is read-only by policy
+
+       Test expect comments are abbreviated. Not wrong for a manual test
+       plan, but could confuse testers. Consider using exact messages.
+
+  [W3] Test 16: Python message has trailing "policy".
+
+       Actual: PermissionError("[sandflox] BLOCKED: write to '/etc/passwd' outside workspace policy")
+       Test:   # expect: PermissionError("[sandflox] BLOCKED: write to '/etc/passwd' outside workspace")
+       Missing "policy" at end.
+
+  [W4] Test 20: missing the diagnostics line that prints first.
+
+       Before the elevate message, emitDiagnostics prints:
+         [sandflox] Profile: default | Network: blocked | Filesystem: workspace
+       Then elevateExec prints:
+         [sandflox] Elevating to sandboxed shell (sandbox-exec)
+       Then inside the shell, entrypoint.sh prints:
+         [sandflox] Sandbox active: N tools (profile: default)
+       Test only expects the last two.
+
+  ── DESIGN QUESTIONS ──────────────────────────────────────
+
+  [D1] Should `touch` be added to WriteCmds in shell.go?
+
+       `touch` creates/modifies files. It's a natural write operation that
+       agents use frequently. Not wrapping it means shell-tier enforcement
+       has a gap for `touch` operations. Kernel tier catches it, but
+       shell-only users (no elevate) are exposed.
+
+       Tradeoff: adding touch increases the wrapped command count but
+       closes a real enforcement gap.
+
+  [D2] Shell redirections (>, >>, |) are inherently unwrappable at
+       the shell tier.
+
+       This is a fundamental limitation, not a bug. But the test plan
+       should explicitly document it so testers know:
+         "Shell redirections bypass fs-filter. Kernel tier blocks them
+         at the syscall level. This is why elevate exists."
+
+  [D3] flox-sbx .git/ path doesn't exist in the consumer env.
+
+       The policy.toml read-only list includes ".git/", which makes
+       sense for a developer project but doesn't exist in the flox-sbx
+       consumer directory. Consider either:
+       (a) removing .git/ from the consumer policy.toml (it's harmless
+           but confusing in tests), or
+       (b) noting in the test that .git/ must be created for the test
+           to produce the expected read-only message.
