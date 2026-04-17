@@ -94,11 +94,11 @@ Plans:
   1. Running `sandflox validate` with a valid policy.toml prints what would be enforced (profile, modes, denied paths, tool count) without launching a sandbox
   2. Running `sandflox status` from inside a sandboxed session reports the active profile, blocked paths, allowed tools, and network mode from cached state
   3. Running `sandflox elevate` from within a plain `flox activate` session re-execs the shell under sandbox-exec, and running it again inside an already-sandboxed session prints a "already sandboxed" message instead of nesting
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- Subcommand routing (extractSubcommand + main.go rewire) + validate handler (CMD-01) + status handler with ReadCache (CMD-02)
+- [ ] 05-02-PLAN.md -- Elevate subcommand (CMD-03): buildElevateArgv, elevateExec, re-entry/session detection, platform stubs
 
 ### Phase 6: Distribution and Polish
 **Goal**: sandflox is published to FloxHub and installable into any Flox environment with a hermetic, reproducible Nix build
@@ -125,5 +125,5 @@ Note: Phase 3 depends on Phase 1 (not Phase 2), so Phases 2 and 3 could theoreti
 | 2. Kernel Enforcement (SBPL + sandbox-exec) | 3/3 | Complete   | 2026-04-16 |
 | 3. Shell Enforcement Artifacts | 0/3 | Planning complete | - |
 | 4. Security Hardening | 0/2 | Planning complete | - |
-| 5. Subcommands | 0/2 | Not started | - |
+| 5. Subcommands | 0/2 | Planning complete | - |
 | 6. Distribution and Polish | 0/1 | Not started | - |
