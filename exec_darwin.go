@@ -85,7 +85,7 @@ func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, entrypoin
 	sbxPath, err := exec.LookPath("sandbox-exec")
 	if err != nil {
 		fmt.Fprintf(stderr, "[sandflox] WARNING: sandbox-exec not found -- falling back to shell-only\n")
-		execFlox(userArgs)
+		execFlox(cfg, userArgs)
 		return
 	}
 
@@ -121,9 +121,13 @@ func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, entrypoin
 	// 7. Build argv and exec
 	argv := buildSandboxExecArgv(sbplPath, projectDir, home, floxCachePath, floxAbsPath, entrypointPath, userArgs)
 
+	// Sanitize environment before exec -- replaces os.Environ() with
+	// filtered allowlist (SEC-01/02/03).
+	env := BuildSanitizedEnv(cfg)
+
 	// syscall.Exec replaces the current process; does not return on success.
 	// If we get here, exec failed (Pitfall 1 -- never fall through after exec).
-	execErr := syscall.Exec(sbxPath, argv, os.Environ())
+	execErr := syscall.Exec(sbxPath, argv, env)
 	fmt.Fprintf(stderr, "[sandflox] ERROR: sandbox-exec failed: %v\n", execErr)
 	os.Exit(1)
 }

@@ -39,7 +39,7 @@ func main() {
 		// If policy.toml does not exist, fall through to bare flox activate
 		if os.IsNotExist(unwrapPathError(err)) {
 			fmt.Fprintf(stderr, "[sandflox] No policy.toml found -- falling back to flox activate\n")
-			execFlox(userArgs)
+			execFlox(nil, userArgs)
 			return
 		}
 		// Parse error -- report and exit
@@ -119,6 +119,15 @@ func emitDiagnostics(config *ResolvedConfig, projectDir string, debug bool) {
 		sbplPath := filepath.Join(projectDir, ".flox", "cache", "sandflox", "sandflox.sb")
 		ruleCount := strings.Count(sbplContent, "\n(deny ") + strings.Count(sbplContent, "\n(allow ")
 		fmt.Fprintf(stderr, "[sandflox] sbpl: %s (%d rules)\n", sbplPath, ruleCount)
+
+		// Env scrubbing diagnostic: counts only (values are secrets).
+		env := BuildSanitizedEnv(config)
+		parentCount := len(os.Environ())
+		passedCount := len(env)
+		forcedCount := len(forcedVars)
+		blockedCount := parentCount - passedCount + forcedCount
+		fmt.Fprintf(stderr, "[sandflox] Env: %d vars passed, %d blocked, %d forced\n",
+			passedCount, blockedCount, forcedCount)
 	}
 }
 
@@ -126,8 +135,10 @@ func emitDiagnostics(config *ResolvedConfig, projectDir string, debug bool) {
 
 // execFlox replaces the current process with flox activate using syscall.Exec.
 // If userArgs is empty, starts interactive mode. Otherwise wraps the command
-// in non-interactive mode with --.
-func execFlox(userArgs []string) {
+// in non-interactive mode with --. When cfg is non-nil, the process inherits
+// a sanitized environment via BuildSanitizedEnv; when nil (no policy.toml),
+// the parent environment passes through unchanged.
+func execFlox(cfg *ResolvedConfig, userArgs []string) {
 	floxPath, err := exec.LookPath("flox")
 	if err != nil {
 		fmt.Fprintf(stderr, "[sandflox] ERROR: flox not found in PATH\n")
@@ -141,8 +152,16 @@ func execFlox(userArgs []string) {
 		argv = append(argv, userArgs...)
 	}
 
+	// Sanitize environment when policy is available; pass through unchanged
+	// when no policy.toml was found (cfg == nil). Per Research Open Question 1:
+	// graceful degradation preserves existing behavior without a policy file.
+	env := os.Environ()
+	if cfg != nil {
+		env = BuildSanitizedEnv(cfg)
+	}
+
 	// Replace this process with flox -- does not return on success
-	execErr := syscall.Exec(floxPath, argv, os.Environ())
+	execErr := syscall.Exec(floxPath, argv, env)
 	// If we get here, exec failed
 	fmt.Fprintf(stderr, "[sandflox] ERROR: exec failed: %v\n", execErr)
 	os.Exit(1)
