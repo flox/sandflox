@@ -108,10 +108,10 @@ Plans:
   1. Running `flox publish` successfully uploads sandflox to FloxHub
   2. In a fresh Flox environment, running `flox install sandflox` makes the `sandflox` command available
   3. The Nix expression uses `lib.fileset.toSource` for hermetic source selection and `-trimpath` in build flags (no build path leaks in binary)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md -- Fix env.json blocker, push to remote, build, publish to FloxHub, verify flox install
 
 ## Progress
 
@@ -126,4 +126,4 @@ Note: Phase 3 depends on Phase 1 (not Phase 2), so Phases 2 and 3 could theoreti
 | 3. Shell Enforcement Artifacts | 0/3 | Planning complete | - |
 | 4. Security Hardening | 0/2 | Planning complete | - |
 | 5. Subcommands | 0/2 | Planning complete | - |
-| 6. Distribution and Polish | 0/1 | Not started | - |
+| 6. Distribution and Polish | 0/1 | Planning complete | - |
