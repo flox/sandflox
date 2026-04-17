@@ -22,9 +22,30 @@ var stderr io.Writer = os.Stderr
 // ── Main Entry Point ────────────────────────────────────
 
 func main() {
-	// 1. Parse CLI flags
-	flags, userArgs := ParseFlags(os.Args[1:])
+	// 0. Extract subcommand (if any) before flag parsing
+	subcmd, remaining := extractSubcommand(os.Args[1:])
 
+	// 1. Parse CLI flags from remaining args
+	flags, userArgs := ParseFlags(remaining)
+
+	// 2. Route to subcommand handler or continue default pipeline
+	switch subcmd {
+	case "validate":
+		runValidate(flags)
+	case "status":
+		runStatus(flags)
+	case "elevate":
+		runElevate(flags)
+	default:
+		// Original pipeline (steps 2-8)
+		runDefault(flags, userArgs)
+	}
+}
+
+// runDefault executes the original sandflox pipeline: parse policy,
+// resolve config, write cache, generate shell artifacts, emit diagnostics,
+// and exec into flox activate wrapped in kernel enforcement.
+func runDefault(flags *CLIFlags, userArgs []string) {
 	// 2. Determine project directory
 	projectDir := resolveProjectDir(flags)
 
