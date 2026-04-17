@@ -21,6 +21,7 @@ type ResolvedConfig struct {
 	Writable       []string `json:"writable"`
 	ReadOnly       []string `json:"read_only"`
 	Denied         []string `json:"denied"`
+	EnvPassthrough []string `json:"env_passthrough"`
 }
 
 // ResolveConfig resolves the active configuration by applying three-level

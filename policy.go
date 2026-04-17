@@ -14,7 +14,13 @@ type Policy struct {
 	Meta       MetaSection
 	Network    NetworkSection
 	Filesystem FilesystemSection
+	Security   SecuritySection
 	Profiles   map[string]ProfileSection
+}
+
+// SecuritySection holds the [security] table values.
+type SecuritySection struct {
+	EnvPassthrough []string
 }
 
 // MetaSection holds the [meta] table values.

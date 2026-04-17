@@ -408,6 +408,56 @@ filesystem = "readonly"
 	}
 }
 
+// ── Security Section Tests ──────────────────────────────
+
+func TestParsePolicy_SecuritySection(t *testing.T) {
+	input := `[meta]
+version = "2"
+
+[security]
+env-passthrough = ["EDITOR", "PAGER"]
+`
+	p, err := parsePolicyFromString(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(p.Security.EnvPassthrough) != 2 {
+		t.Fatalf("EnvPassthrough len = %d, want 2", len(p.Security.EnvPassthrough))
+	}
+	if p.Security.EnvPassthrough[0] != "EDITOR" || p.Security.EnvPassthrough[1] != "PAGER" {
+		t.Errorf("EnvPassthrough = %v, want [EDITOR PAGER]", p.Security.EnvPassthrough)
+	}
+}
+
+func TestParsePolicy_SecuritySectionEmpty(t *testing.T) {
+	input := `[meta]
+version = "2"
+
+[security]
+env-passthrough = []
+`
+	p, err := parsePolicyFromString(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(p.Security.EnvPassthrough) != 0 {
+		t.Errorf("EnvPassthrough len = %d, want 0", len(p.Security.EnvPassthrough))
+	}
+}
+
+func TestParsePolicy_NoSecuritySection(t *testing.T) {
+	input := `[meta]
+version = "2"
+`
+	p, err := parsePolicyFromString(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p.Security.EnvPassthrough != nil {
+		t.Errorf("EnvPassthrough = %v, want nil (no [security] section)", p.Security.EnvPassthrough)
+	}
+}
+
 // parsePolicyFromString is a test helper that writes input to a temp file and parses it.
 func parsePolicyFromString(input string) (*Policy, error) {
 	tmpDir := os.TempDir()

@@ -165,6 +165,26 @@ func TestProfileMergeNoOverride(t *testing.T) {
 	}
 }
 
+// ── EnvPassthrough Resolution Tests ─────────────────────
+
+func TestResolveConfig_EnvPassthrough(t *testing.T) {
+	t.Setenv("SANDFLOX_PROFILE", "")
+
+	policy := &Policy{
+		Meta:       MetaSection{Version: "2", Profile: "default"},
+		Network:    NetworkSection{Mode: "blocked"},
+		Filesystem: FilesystemSection{Mode: "workspace"},
+		Security:   SecuritySection{EnvPassthrough: []string{"EDITOR"}},
+		Profiles:   map[string]ProfileSection{},
+	}
+	flags := &CLIFlags{}
+
+	config := ResolveConfig(policy, flags, "/tmp/test")
+	if len(config.EnvPassthrough) != 1 || config.EnvPassthrough[0] != "EDITOR" {
+		t.Errorf("EnvPassthrough = %v, want [EDITOR]", config.EnvPassthrough)
+	}
+}
+
 // ── Path Resolution Tests ───────────────────────────────
 
 func TestResolvePathTilde(t *testing.T) {
