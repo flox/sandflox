@@ -44,6 +44,7 @@ AI agents cannot escape the sandbox — not through PATH manipulation, absolute 
 - ✓ Config caching: write resolved config, path lists, and generated artifacts to `.flox/cache/sandflox/` (Phase 1)
 - ✓ Diagnostic output: `[sandflox]` prefixed messages to stderr (profile, network mode, filesystem mode, SBPL path/rule count) (Phase 1 + Phase 2 D-07)
 - ✓ `syscall.Exec` for clean process replacement — no child process overhead (matching flox-bwrap pattern) (Phase 1 scaffold, Phase 2 wired through sandbox-exec)
+- ✓ Environment variable sanitization: allowlist-based filtering blocks credential-carrying vars (AWS_*, SSH_*, GITHUB_*, etc.), policy-configurable passthrough via `[security] env-passthrough`, Python safety flags force-set (Phase 4)
 
 ### Out of Scope
 
@@ -120,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-17 after Phase 3 completion — shell enforcement generators (entrypoint.sh, fs-filter.sh, usercustomize.py) ported to Go templates, wired into runtime via bash --rcfile/bash -c dispatch, 9 integration tests proving SHELL-01..08*
+*Last updated: 2026-04-17 after Phase 4 completion — environment variable sanitization with allowlist-based filtering, credential prefix blocking, policy-configurable passthrough, Python safety flags, wired into both exec paths with 4 integration tests*
