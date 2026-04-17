@@ -36,11 +36,11 @@ AI agents cannot escape the sandbox — not through PATH manipulation, absolute 
 - [ ] Re-exec elevation: `sandflox elevate` from within a `flox activate` session re-execs the shell under sandbox-exec (one-time bounce)
 - ✓ Policy parsing in Go: custom TOML subset parser with strict validation and line-numbered errors (Phase 1)
 - ✓ SBPL profile generation in Go: generate Apple Seatbelt profiles from policy — filesystem modes, network modes, denied paths (Phase 2)
-- [ ] Shell enforcement in Go: binary generates and applies PATH wipe, requisites symlink bin, function armor, fs-filter wrappers, breadcrumb cleanup as part of the activation it controls
+- ✓ Shell enforcement in Go: binary generates and applies PATH wipe, requisites symlink bin, function armor, fs-filter wrappers, breadcrumb cleanup as part of the activation it controls (Phase 3)
 - ✓ CLI flags: `--net`, `--profile <name>`, `--policy <path>`, `--debug` — flags override policy.toml (Phase 1)
 - ✓ macOS sandbox-exec enforcement: filesystem modes (workspace/strict/permissive), network modes (blocked/unrestricted), denied paths, localhost allowance (Phase 2)
-- [ ] Requisites management: parse requisites files, generate symlink bin directories from `$FLOX_ENV/bin`
-- [ ] Python enforcement: generate `usercustomize.py` for Python write enforcement and ensurepip blocking
+- ✓ Requisites management: parse requisites files, generate symlink bin directories from `$FLOX_ENV/bin` (Phase 3)
+- ✓ Python enforcement: generate `usercustomize.py` for Python write enforcement and ensurepip blocking (Phase 3)
 - ✓ Config caching: write resolved config, path lists, and generated artifacts to `.flox/cache/sandflox/` (Phase 1)
 - ✓ Diagnostic output: `[sandflox]` prefixed messages to stderr (profile, network mode, filesystem mode, SBPL path/rule count) (Phase 1 + Phase 2 D-07)
 - ✓ `syscall.Exec` for clean process replacement — no child process overhead (matching flox-bwrap pattern) (Phase 1 scaffold, Phase 2 wired through sandbox-exec)
@@ -98,7 +98,7 @@ The competitive alternative is devcontainers, which work but add a Linux VM laye
 | macOS only | sandbox-exec is the differentiator; Linux has flox-bwrap | Validated (Phase 2 — `exec_darwin.go` / `exec_other.go` split) |
 | Binary IS the entrypoint | sandflox wraps sandbox-exec around flox activate — like flox-bwrap wraps bwrap. No hooks, no profile scripts, clean minimal manifest | Validated (Phase 1) |
 | Keep policy.toml + flags | Declarative policy is a differentiator over flox-bwrap's flag-only approach. CLI flags override for ad-hoc use. Best of both worlds | Validated (Phase 1) |
-| Shell tier = reach, Kernel tier = mutate | Shell enforcement blocks agents from reaching tools (PATH, functions). Kernel enforcement blocks mutations (writes, network). Two concerns, two layers | Kernel tier validated (Phase 2); shell tier pending Phase 3 |
+| Shell tier = reach, Kernel tier = mutate | Shell enforcement blocks agents from reaching tools (PATH, functions). Kernel enforcement blocks mutations (writes, network). Two concerns, two layers | Both tiers validated (Phase 2 kernel, Phase 3 shell) |
 | SBPL byte-identical to bash reference | Go `GenerateSBPL` mirrors bash `_sfx_generate_sbpl()` structure exactly — enables byte-comparison of cached profile to bash output for regression safety | Validated (Phase 2) |
 | `syscall.Exec` to `sandbox-exec` (not child process) | Clean PID replacement; no sandflox process in the tree; matches flox-bwrap pattern | Validated (Phase 2) |
 
@@ -120,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 after Phase 2 completion — kernel enforcement (SBPL + sandbox-exec) wired through `syscall.Exec` on darwin, with integration tests proving write/network/denied-path blocking*
+*Last updated: 2026-04-17 after Phase 3 completion — shell enforcement generators (entrypoint.sh, fs-filter.sh, usercustomize.py) ported to Go templates, wired into runtime via bash --rcfile/bash -c dispatch, 9 integration tests proving SHELL-01..08*
