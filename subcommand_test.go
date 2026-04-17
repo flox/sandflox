@@ -348,6 +348,75 @@ func TestStatusNoCache(t *testing.T) {
 	}
 }
 
+// ── Elevate detection tests ──────────────────────────────
+
+func TestElevateAlreadySandboxed(t *testing.T) {
+	t.Setenv("SANDFLOX_ENABLED", "1")
+	t.Setenv("FLOX_ENV", "/some/path")
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	msg, code := checkElevatePrereqs()
+	if code != 0 {
+		t.Errorf("expected exit code 0 for already-sandboxed, got %d", code)
+	}
+	if !strings.Contains(msg, "Already sandboxed") {
+		t.Errorf("expected 'Already sandboxed' message, got %q", msg)
+	}
+}
+
+func TestElevateNoFlox(t *testing.T) {
+	t.Setenv("SANDFLOX_ENABLED", "")
+	t.Setenv("FLOX_ENV", "")
+
+	msg, code := checkElevatePrereqs()
+	if code != 1 {
+		t.Errorf("expected exit code 1 for no flox session, got %d", code)
+	}
+	if !strings.Contains(msg, "Not in a flox session") {
+		t.Errorf("expected 'Not in a flox session' message, got %q", msg)
+	}
+}
+
+func TestElevateHasFloxEnv(t *testing.T) {
+	t.Setenv("SANDFLOX_ENABLED", "")
+	t.Setenv("FLOX_ENV", "/some/flox/env")
+
+	msg, code := checkElevatePrereqs()
+	if msg != "" {
+		t.Errorf("expected empty message for valid flox session, got %q (code=%d)", msg, code)
+	}
+}
+
+func TestElevateNoPolicyExits(t *testing.T) {
+	dir := t.TempDir() // empty dir -- no policy.toml
+	t.Setenv("SANDFLOX_ENABLED", "")
+	t.Setenv("FLOX_ENV", "/some/flox/env")
+	t.Setenv("FLOX_ENV_CACHE", "")
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	flags := &CLIFlags{
+		PolicyPath: filepath.Join(dir, "policy.toml"),
+	}
+
+	code := runElevateWithExitCode(flags)
+	if code != 1 {
+		t.Errorf("runElevate with no policy should return exit code 1, got %d", code)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "[sandflox] ERROR:") {
+		t.Errorf("expected error message in output, got:\n%s", output)
+	}
+}
+
 func TestDiscoverCacheDir(t *testing.T) {
 	// Test fallback path: cwd-relative
 	projectDir := t.TempDir()
