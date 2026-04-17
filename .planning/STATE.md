@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-04-17T01:25:00.687Z"
+status: executing
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-04-17T01:47:07.864Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** AI agents cannot escape the sandbox -- not through PATH manipulation, absolute paths, shell redirects, or kernel syscalls -- without requiring a Linux VM or devcontainer.
-**Current focus:** Phase 03 — shell-enforcement-artifacts
+**Current focus:** Phase 04 — security-hardening
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 04 (security-hardening) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-17
 
 Progress: [##########] 100%
@@ -61,6 +61,7 @@ Progress: [##########] 100%
 | Phase 03 P01 | 5min | 2 tasks | 5 files |
 | Phase 03 P02 | 5min | 2 tasks | 5 files |
 | Phase 03 P03 | 10min | 1 tasks | 3 files |
+| Phase 04 P01 | 4min | 1 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,10 @@ Recent decisions affecting current work:
 - [Phase 03]: Fixed export -f _sfx_check_write_target in fs-filter.sh.tmpl -- required for D-02 non-interactive mode where wrapper functions survive bash -c child process boundary
 - [Phase 03]: Replaced cat|tr with bash read builtin in entrypoint.sh.tmpl -- external commands unavailable after PATH wipe to sandflox/bin
 - [Phase 03]: Integration test probes use bash builtins (echo, printf, command -v, parameter expansion) instead of external commands for portability across minimal/full flox environments
+- [Phase 04]: Allowlist-first env filtering: unknown vars blocked by default, safer than blocklist-only
+- [Phase 04]: Passthrough bypasses block check: user explicitly passes a var even if it matches blocked prefix
+- [Phase 04]: Forced vars in Go + shell (defense-in-depth): PYTHONDONTWRITEBYTECODE=1 and PYTHON_NOPIP=1 set before exec
+- [Phase 04]: Sorted env output for deterministic --debug and test assertions
 
 ### Pending Todos
 
@@ -109,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-17T00:53:53.119Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-04-17T01:47:07.862Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None

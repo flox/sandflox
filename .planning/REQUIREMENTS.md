@@ -55,9 +55,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Security
 
-- [ ] **SEC-01**: sandflox scrubs environment variables before passing them into the sandbox -- only allowlisted vars pass through (HOME, USER, TERM, SHELL, LANG, PATH, plus Flox-required vars)
-- [ ] **SEC-02**: sandflox blocks sensitive env vars by default (AWS_*, SSH_*, GPG_*, GITHUB_TOKEN, etc.) with a configurable allowlist in policy.toml
-- [ ] **SEC-03**: sandflox sets `PYTHONDONTWRITEBYTECODE=1` and `PYTHON_NOPIP=1` inside the sandbox
+- [x] **SEC-01**: sandflox scrubs environment variables before passing them into the sandbox -- only allowlisted vars pass through (HOME, USER, TERM, SHELL, LANG, PATH, plus Flox-required vars)
+- [x] **SEC-02**: sandflox blocks sensitive env vars by default (AWS_*, SSH_*, GPG_*, GITHUB_TOKEN, etc.) with a configurable allowlist in policy.toml
+- [x] **SEC-03**: sandflox sets `PYTHONDONTWRITEBYTECODE=1` and `PYTHON_NOPIP=1` inside the sandbox
 
 ## v2 Requirements
 
@@ -119,9 +119,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SHELL-06 | Phase 3 | Complete |
 | SHELL-07 | Phase 3 | Complete |
 | SHELL-08 | Phase 3 | Complete |
-| SEC-01 | Phase 4 | Pending |
-| SEC-02 | Phase 4 | Pending |
-| SEC-03 | Phase 4 | Pending |
+| SEC-01 | Phase 4 | Complete |
+| SEC-02 | Phase 4 | Complete |
+| SEC-03 | Phase 4 | Complete |
 | CMD-01 | Phase 5 | Pending |
 | CMD-02 | Phase 5 | Pending |
 | CMD-03 | Phase 5 | Pending |
