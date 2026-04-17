@@ -208,11 +208,89 @@ func runStatusInternal(cacheDir string, debug bool) int {
 	return 0
 }
 
-// ── Elevate Handler (stub -- future plan) ───────────────
+// ── Elevate Handler ─────────────────────────────────────
 
-// runElevate re-execs the current shell under sandbox-exec.
-// Placeholder for future implementation.
+// checkElevatePrereqs checks whether the elevate subcommand can proceed.
+// Returns ("", -1) if all checks pass and execution should continue.
+// Returns (message, exitCode) if a check stops execution.
+//
+// Testable: does not call os.Exit. runElevate calls os.Exit based on
+// the returned values.
+func checkElevatePrereqs() (string, int) {
+	// 1. Re-entry detection: already sandboxed
+	if os.Getenv("SANDFLOX_ENABLED") == "1" {
+		return "[sandflox] Already sandboxed -- nothing to do.\n", 0
+	}
+	// 2. Flox session detection: not in a flox session
+	if os.Getenv("FLOX_ENV") == "" {
+		return "[sandflox] Not in a flox session. Run `flox activate` first.\n", 1
+	}
+	return "", -1
+}
+
+// runElevate re-execs the current shell under sandbox-exec for kernel
+// enforcement. Detects re-entry (already sandboxed) and missing flox
+// session. Uses os.Exit -- see runElevateWithExitCode for testable variant.
 func runElevate(flags *CLIFlags) {
-	fmt.Fprintf(stderr, "[sandflox] ERROR: elevate not yet implemented\n")
-	os.Exit(1)
+	os.Exit(runElevateWithExitCode(flags))
+}
+
+// runElevateWithExitCode is the testable core of runElevate. Returns the
+// exit code instead of calling os.Exit.
+func runElevateWithExitCode(flags *CLIFlags) int {
+	// 1-2. Prereq checks (re-entry + flox session)
+	if msg, code := checkElevatePrereqs(); msg != "" {
+		fmt.Fprint(stderr, msg)
+		return code
+	}
+
+	// 3. Read FLOX_ENV_CACHE early (Pitfall 6: capture before env manipulation)
+	floxEnvCache := os.Getenv("FLOX_ENV_CACHE")
+
+	// 4. Standard pipeline: resolve project dir, parse policy
+	projectDir := resolveProjectDir(flags)
+
+	policyPath := filepath.Join(projectDir, "policy.toml")
+	if flags.PolicyPath != "" {
+		policyPath = flags.PolicyPath
+	}
+
+	policy, err := ParsePolicy(policyPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "[sandflox] ERROR: %v\n", err)
+		return 1
+	}
+
+	// 5. Resolve config
+	config := ResolveConfig(policy, flags, projectDir)
+
+	// 6. Determine cache dir
+	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+	if floxEnvCache != "" {
+		cacheDir = filepath.Join(floxEnvCache, "sandflox")
+	}
+
+	// 7. Write cache artifacts
+	if err := WriteCache(cacheDir, config, projectDir); err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+
+	// 8. Generate shell enforcement artifacts
+	if err := WriteShellArtifacts(cacheDir, config); err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+
+	entrypointPath := filepath.Join(cacheDir, "entrypoint.sh")
+
+	// 9. Diagnostics
+	emitDiagnostics(config, projectDir, flags.Debug)
+
+	// 10. Call platform-specific exec (does not return on success)
+	elevateExec(config, projectDir, entrypointPath)
+
+	// If we reach here on darwin, elevateExec already called os.Exit(1)
+	// On non-darwin, elevateExec prints error and exits -- but just in case:
+	return 1
 }
