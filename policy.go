@@ -264,6 +264,13 @@ func mapToPolicy(sections map[string]map[string]interface{}) (*Policy, error) {
 		}
 	}
 
+	// [security]
+	if sec, ok := sections["security"]; ok {
+		if v, ok := sec["env-passthrough"]; ok {
+			p.Security.EnvPassthrough = toStringSlice(v)
+		}
+	}
+
 	// [profiles.*] -- dotted sections
 	for sectionName, kvs := range sections {
 		if !strings.HasPrefix(sectionName, "profiles.") {

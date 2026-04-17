@@ -108,8 +108,59 @@ func isBlocked(key string) bool {
 //
 // Output is sorted for deterministic --debug output and test assertions.
 func BuildSanitizedEnv(cfg *ResolvedConfig) []string {
-	// TODO: stub -- return nil to make tests fail in RED phase
-	_ = os.Environ()
-	_ = sort.Strings
-	return nil
+	envMap := envToMap(os.Environ())
+	seen := make(map[string]bool)
+	var result []string
+
+	// Phase 1: exact allowlist -- POSIX essentials, sandflox vars
+	for _, key := range defaultAllowlist {
+		if isBlocked(key) {
+			continue
+		}
+		if val, ok := envMap[key]; ok && !seen[key] {
+			result = append(result, key+"="+val)
+			seen[key] = true
+		}
+	}
+
+	// Phase 2: prefix allowlist -- FLOX_*, NIX_*, LC_*, __*, XPC_*
+	for _, prefix := range allowedPrefixes {
+		for key, val := range envMap {
+			if strings.HasPrefix(key, prefix) && !isBlocked(key) && !seen[key] {
+				result = append(result, key+"="+val)
+				seen[key] = true
+			}
+		}
+	}
+
+	// Phase 3: user-configured passthrough -- bypasses block check
+	if cfg != nil {
+		for _, key := range cfg.EnvPassthrough {
+			if val, ok := envMap[key]; ok && !seen[key] {
+				result = append(result, key+"="+val)
+				seen[key] = true
+			}
+		}
+	}
+
+	// Phase 4: forced vars -- override any existing value
+	for key, val := range forcedVars {
+		entry := key + "=" + val
+		if seen[key] {
+			// Replace existing entry
+			for i, e := range result {
+				if strings.HasPrefix(e, key+"=") {
+					result[i] = entry
+					break
+				}
+			}
+		} else {
+			result = append(result, entry)
+			seen[key] = true
+		}
+	}
+
+	// Sort for deterministic output (Pitfall 5)
+	sort.Strings(result)
+	return result
 }

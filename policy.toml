@@ -22,6 +22,12 @@ writable = [".", "/tmp"]         # relative to project root; used in workspace m
 read-only = [".flox/env/", ".git/", ".env", "policy.toml", "requisites.txt"]
 denied = ["~/.ssh/", "~/.gnupg/", "~/.aws/", "~/.config/gcloud/", "~/.config/gh/"]
 
+# ── Security hardening ──────────────────────────────────
+# Environment scrubbing: only allowlisted vars pass into the sandbox.
+# Add vars here that your workflow needs but sandflox blocks by default.
+[security]
+env-passthrough = []
+
 # ── Profile presets ──────────────────────────────────────
 # Override network/filesystem/requisites per use case.
 # Select via SANDFLOX_PROFILE env var or [meta] profile.

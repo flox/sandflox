@@ -76,6 +76,9 @@ func ResolveConfig(policy *Policy, flags *CLIFlags, projectDir string) *Resolved
 	readOnly := resolvePaths(policy.Filesystem.ReadOnly, projectDir)
 	denied := resolvePaths(policy.Filesystem.Denied, projectDir)
 
+	// 8. Security: env passthrough
+	envPassthrough := policy.Security.EnvPassthrough
+
 	return &ResolvedConfig{
 		Profile:        profileName,
 		NetMode:        netMode,
@@ -85,6 +88,7 @@ func ResolveConfig(policy *Policy, flags *CLIFlags, projectDir string) *Resolved
 		Writable:       writable,
 		ReadOnly:       readOnly,
 		Denied:         denied,
+		EnvPassthrough: envPassthrough,
 	}
 }
 
