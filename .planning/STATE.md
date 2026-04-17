@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-04-17T00:40:19.927Z"
+status: verifying
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-04-17T00:53:53.122Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 100
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-15)
 
 Phase: 03 (shell-enforcement-artifacts) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-17
 
 Progress: [##########] 100%
@@ -60,6 +60,7 @@ Progress: [##########] 100%
 | Phase 02 P03 | 5min | 1 tasks | 1 files |
 | Phase 03 P01 | 5min | 2 tasks | 5 files |
 | Phase 03 P02 | 5min | 2 tasks | 5 files |
+| Phase 03 P03 | 10min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 03]: usercustomize.py is static template -- Python reads cached state files at runtime, no Go substitutions
 - [Phase 03]: Renamed TestBuildSandboxExecArgs_NoUserArgsDoesNotEmitDoubleDash to InteractiveUsesRcfileNotDashC -- D-01 interactive now includes '--' before bash
 - [Phase 03]: net-blocked.flag writer already present in cache.go from Phase 1; only toggle test added in Plan 03-02
+- [Phase 03]: Fixed export -f _sfx_check_write_target in fs-filter.sh.tmpl -- required for D-02 non-interactive mode where wrapper functions survive bash -c child process boundary
+- [Phase 03]: Replaced cat|tr with bash read builtin in entrypoint.sh.tmpl -- external commands unavailable after PATH wipe to sandflox/bin
+- [Phase 03]: Integration test probes use bash builtins (echo, printf, command -v, parameter expansion) instead of external commands for portability across minimal/full flox environments
 
 ### Pending Todos
 
@@ -105,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-17T00:40:19.925Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-04-17T00:53:53.119Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
