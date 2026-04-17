@@ -111,7 +111,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 06-01-PLAN.md -- Fix env.json blocker, push to remote, build, publish to FloxHub, verify flox install
+- [x] 06-01-PLAN.md -- Fix env.json blocker, push to remote, build, publish to FloxHub, verify flox install
 
 ## Progress
 

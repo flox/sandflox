@@ -42,10 +42,10 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Distribution
 
 - [x] **DIST-01**: sandflox builds via `flox build` using a `.flox/pkgs/sandflox.nix` expression with `buildGoModule` and `vendorHash = null`
-- [ ] **DIST-02**: sandflox publishes to FloxHub via `flox publish`
-- [ ] **DIST-03**: sandflox is installable into any Flox environment via `flox install sandflox`
+- [x] **DIST-02**: sandflox publishes to FloxHub via `flox publish`
+- [x] **DIST-03**: sandflox is installable into any Flox environment via `flox install sandflox`
 - [x] **DIST-04**: The sandflox build manifest is minimal -- only `go` in `[install]`, no hooks or profile scripts
-- [ ] **DIST-05**: sandflox Nix expression uses `lib.fileset.toSource` for hermetic source selection and `-trimpath` in build flags
+- [x] **DIST-05**: sandflox Nix expression uses `lib.fileset.toSource` for hermetic source selection and `-trimpath` in build flags
 
 ### Subcommands
 
@@ -126,10 +126,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CMD-02 | Phase 5 | Complete |
 | CMD-03 | Phase 5 | Complete |
 | DIST-01 | Phase 1 | Complete |
-| DIST-02 | Phase 6 | Pending |
-| DIST-03 | Phase 6 | Pending |
+| DIST-02 | Phase 6 | Complete |
+| DIST-03 | Phase 6 | Complete |
 | DIST-04 | Phase 1 | Complete |
-| DIST-05 | Phase 6 | Pending |
+| DIST-05 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 34 total
