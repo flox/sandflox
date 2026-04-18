@@ -1,12 +1,21 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+// ── Embedded Requisites ─────────────────────────────────
+
+// embeddedRequisites bundles the three requisites files into the binary
+// so consumer environments (flox-sbx) work without local copies.
+//
+//go:embed requisites.txt requisites-minimal.txt requisites-full.txt
+var embeddedRequisites embed.FS
 
 // ── Cache Artifact Writer ───────────────────────────────
 
@@ -53,11 +62,15 @@ func WriteCache(cacheDir string, config *ResolvedConfig, projectDir string) erro
 		return fmt.Errorf("[sandflox] ERROR: cannot write denied-paths.txt: %w", err)
 	}
 
-	// Copy requisites file to cache
+	// Copy requisites file to cache: try disk first, fall back to embedded
 	reqSrc := filepath.Join(projectDir, config.Requisites)
 	reqData, err := os.ReadFile(reqSrc)
 	if err != nil {
-		return fmt.Errorf("[sandflox] ERROR: cannot read requisites file %s: %w", config.Requisites, err)
+		// Fall back to embedded requisites (consumer envs without local files)
+		reqData, err = embeddedRequisites.ReadFile(config.Requisites)
+		if err != nil {
+			return fmt.Errorf("[sandflox] ERROR: cannot read requisites file %s (disk or embedded): %w", config.Requisites, err)
+		}
 	}
 	if err := os.WriteFile(filepath.Join(cacheDir, "requisites.txt"), reqData, 0644); err != nil {
 		return fmt.Errorf("[sandflox] ERROR: cannot write requisites.txt: %w", err)

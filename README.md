@@ -10,19 +10,41 @@ AI coding agents (Claude Code, Cursor, Copilot, etc.) can run shell commands. Ev
 
 sandflox wraps `flox activate` under Apple's `sandbox-exec`, enforcing what tools an agent can reach (shell enforcement) and what it can mutate (kernel enforcement). Driven by a declarative `policy.toml`. Zero external dependencies. Single static Go binary.
 
-## Install
+## Two Artifacts
+
+sandflox ships as two complementary Flox artifacts:
+
+| Artifact | What it is | Install |
+|----------|-----------|---------|
+| `8BitTacoSupreme/sandflox` | Go binary (FloxHub package) | `flox install 8BitTacoSupreme/sandflox` |
+| `8BitTacoSupreme/flox-sbx` | Hardened Flox environment (FloxHub environment) | `flox pull 8BitTacoSupreme/flox-sbx` |
+
+**The binary** provides CLI commands (`sandflox`, `sandflox validate`, `sandflox elevate`, etc.) and generates enforcement artifacts. **The environment** wires everything together — `flox activate` gives you shell enforcement out of the box, and `sandflox elevate` adds kernel enforcement on top.
+
+## Quick Start (Zero Config)
 
 ```bash
-flox install 8BitTacoSupreme/sandflox
+# Pull the pre-configured sandbox environment
+flox pull 8BitTacoSupreme/flox-sbx
+
+# Activate -- shell enforcement is immediate
+flox activate
+
+# Add kernel enforcement (sandbox-exec)
+sandflox elevate
 ```
 
-That's it. The `sandflox` binary is now available inside any `flox activate` session.
+That's it. No `policy.toml` needed — the embedded default policy applies automatically (workspace filesystem mode, blocked network, ~55 tools).
 
-## Quick Start
+## Quick Start (Custom Policy)
 
 ### 1. Create a policy
 
-Drop a `policy.toml` in your project root (or copy the example from this repo):
+```bash
+sandflox init
+```
+
+This writes a default `policy.toml` to the current directory. Edit it to match your project's needs:
 
 ```toml
 [meta]
@@ -133,33 +155,50 @@ Re-execs the shell under `sandbox-exec`. Running it again prints "already sandbo
 
 ```
 policy.toml (declarative, version-controlled)
-    │
-    ▼
+    |
+    v
 sandflox (Go binary)
-    ├── Parse policy.toml → ResolvedConfig
-    ├── Generate shell artifacts (entrypoint.sh, fs-filter.sh, usercustomize.py)
-    ├── Generate SBPL profile (macOS kernel sandbox rules)
-    ├── Sanitize environment (scrub credentials)
-    └── exec sandbox-exec ... flox activate -- bash
+    +-- Parse policy.toml -> ResolvedConfig
+    +-- Generate shell artifacts (entrypoint.sh, fs-filter.sh, usercustomize.py)
+    +-- Generate SBPL profile (macOS kernel sandbox rules)
+    +-- Sanitize environment (scrub credentials)
+    +-- exec sandbox-exec ... flox activate -- bash
 
-┌──────────────────────────────────────────────────────────────────┐
-│  Tier 1 — Kernel (sandbox-exec SBPL)                             │
-│  Blocks: redirects, absolute-path binaries, raw socket I/O       │
-│  Enforcement: filesystem writes, network, denied paths            │
-├──────────────────────────────────────────────────────────────────┤
-│  Tier 2 — Shell (generated bash artifacts)                        │
-│  Blocks: package managers, escape vectors, breadcrumb discovery   │
-│  Enforcement: PATH wipe, requisites filter, function armor        │
-├──────────────────────────────────────────────────────────────────┤
-│  Tier 3 — Environment                                             │
-│  Blocks: credential leakage, Python pip bootstrap                 │
-│  Enforcement: allowlist-based env scrubbing, forced safety flags   │
-└──────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------------+
+|  Tier 1 -- Kernel (sandbox-exec SBPL)                             |
+|  Blocks: redirects, absolute-path binaries, raw socket I/O       |
+|  Enforcement: filesystem writes, network, denied paths            |
++------------------------------------------------------------------+
+|  Tier 2 -- Shell (generated bash artifacts)                       |
+|  Blocks: package managers, escape vectors, breadcrumb discovery   |
+|  Enforcement: PATH wipe, requisites filter, function armor        |
++------------------------------------------------------------------+
+|  Tier 3 -- Environment                                            |
+|  Blocks: credential leakage, Python pip bootstrap                 |
+|  Enforcement: allowlist-based env scrubbing, forced safety flags  |
++------------------------------------------------------------------+
 ```
 
 ### Why both tiers?
 
 Kernel enforcement returns generic "Operation not permitted". Shell enforcement returns `[sandflox] BLOCKED: ...` — agents can understand and adapt. Environment scrubbing prevents credential leakage even if the agent never hits a kernel deny.
+
+### Elevation workflow
+
+```
+flox activate (flox-sbx)       sandflox elevate
+        |                            |
+        v                            v
+  Shell enforcement           Kernel enforcement
+  (PATH, armor, fs-filter)    (sandbox-exec SBPL)
+        |                            |
+        +------- combined -----------+
+        |
+        v
+  Full sandbox (shell + kernel + env scrubbing)
+```
+
+`flox activate` applies shell-tier enforcement via the `sandflox prepare` hook. `sandflox elevate` re-execs the shell under `sandbox-exec` to add kernel-tier enforcement. The two tiers are complementary — shell enforcement provides agent-readable error messages, kernel enforcement provides escape-proof OS-level isolation.
 
 ## CLI Reference
 
@@ -181,7 +220,9 @@ sandflox <subcommand> [flags]
 
 | Command | Description |
 |---------|-------------|
+| `sandflox init` | Write a default `policy.toml` to the current directory |
 | `sandflox validate` | Dry-run — print what would be enforced without launching a sandbox |
+| `sandflox prepare` | Generate enforcement artifacts without launching a sandbox (used by flox-sbx hooks) |
 | `sandflox status` | Report active enforcement state from inside a sandboxed session |
 | `sandflox elevate` | Re-exec current flox session under sandbox-exec |
 
@@ -262,6 +303,9 @@ Edit `policy.toml` to change modes, writable paths, or denied paths. Changes tak
 
 - macOS (Darwin) — sandbox-exec is macOS-specific
 - [Flox](https://flox.dev) 1.10+
+- Your Flox environment must include the tools sandflox will whitelist. The `sandflox`
+  binary enforces policy over tools already present in `$FLOX_ENV/bin` — it does not
+  install them. At minimum: `flox install bash coreutils python3 jq curl git`
 
 ## sandflox vs alternatives
 

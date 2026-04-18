@@ -80,7 +80,7 @@ func buildSandboxExecArgv(sbplPath, projectDir, home, floxCachePath, floxAbsPath
 //  4. LookPath("flox") -- must be absolute in argv (Pitfall 6)
 //  5. Build argv via buildSandboxExecArgv with entrypointPath
 //  6. syscall.Exec -- does not return on success; error path is hard error (Pitfall 1)
-func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, entrypointPath string, userArgs []string) {
+func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, cacheDir string, entrypointPath string, userArgs []string) {
 	// 1. Preflight: sandbox-exec availability
 	sbxPath, err := exec.LookPath("sandbox-exec")
 	if err != nil {
@@ -98,7 +98,6 @@ func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, entrypoin
 
 	// 3. Generate and write SBPL profile
 	sbplContent := GenerateSBPL(cfg, home)
-	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
 	sbplPath, err := WriteSBPL(cacheDir, sbplContent)
 	if err != nil {
 		fmt.Fprintf(stderr, "[sandflox] ERROR: %v\n", err)
@@ -124,6 +123,7 @@ func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, entrypoin
 	// Sanitize environment before exec -- replaces os.Environ() with
 	// filtered allowlist (SEC-01/02/03).
 	env := BuildSanitizedEnv(cfg)
+	env = append(env, "SANDFLOX_SANDBOX=1")
 
 	// syscall.Exec replaces the current process; does not return on success.
 	// If we get here, exec failed (Pitfall 1 -- never fall through after exec).
@@ -171,7 +171,7 @@ func buildElevateArgv(sbplPath, projectDir, home, floxCachePath, entrypointPath 
 //  4. Build argv via buildElevateArgv
 //  5. Sanitize env via BuildSanitizedEnv
 //  6. syscall.Exec (does not return on success)
-func elevateExec(cfg *ResolvedConfig, projectDir, entrypointPath string) {
+func elevateExec(cfg *ResolvedConfig, projectDir, cacheDir, entrypointPath string) {
 	// 1. Preflight: sandbox-exec is mandatory for elevate
 	sbxPath, err := exec.LookPath("sandbox-exec")
 	if err != nil {
@@ -188,7 +188,6 @@ func elevateExec(cfg *ResolvedConfig, projectDir, entrypointPath string) {
 
 	// 3. Generate and write SBPL profile
 	sbplContent := GenerateSBPL(cfg, home)
-	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
 	sbplPath, err := WriteSBPL(cacheDir, sbplContent)
 	if err != nil {
 		fmt.Fprintf(stderr, "[sandflox] ERROR: %v\n", err)
@@ -206,6 +205,7 @@ func elevateExec(cfg *ResolvedConfig, projectDir, entrypointPath string) {
 
 	// Sanitize environment
 	env := BuildSanitizedEnv(cfg)
+	env = append(env, "SANDFLOX_SANDBOX=1")
 
 	// syscall.Exec replaces the process; does not return on success
 	execErr := syscall.Exec(sbxPath, argv, env)

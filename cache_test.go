@@ -361,3 +361,99 @@ func TestCacheWriteRequisites(t *testing.T) {
 		t.Error("cached requisites.txt should contain 'git'")
 	}
 }
+
+// ── Embedded Requisites Fallback Tests ───────────────────
+
+func TestWriteCacheFallsBackToEmbeddedRequisites(t *testing.T) {
+	// Create a project dir WITHOUT any requisites file on disk
+	projectDir := t.TempDir()
+	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+
+	config := &ResolvedConfig{
+		Profile:    "default",
+		NetMode:    "blocked",
+		FsMode:     "workspace",
+		Requisites: "requisites.txt", // not on disk, must use embedded
+	}
+
+	err := WriteCache(cacheDir, config, projectDir)
+	if err != nil {
+		t.Fatalf("WriteCache should succeed with embedded fallback, got: %v", err)
+	}
+
+	// Verify the cached requisites.txt has content from the embedded file
+	data, err := os.ReadFile(filepath.Join(cacheDir, "requisites.txt"))
+	if err != nil {
+		t.Fatalf("cannot read cached requisites.txt: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "bash") {
+		t.Error("embedded requisites.txt should contain 'bash'")
+	}
+	if !strings.Contains(content, "git") {
+		t.Error("embedded requisites.txt should contain 'git'")
+	}
+	if !strings.Contains(content, "curl") {
+		t.Error("embedded requisites.txt should contain 'curl'")
+	}
+}
+
+func TestWriteCacheFallsBackToEmbeddedMinimal(t *testing.T) {
+	projectDir := t.TempDir()
+	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+
+	config := &ResolvedConfig{
+		Profile:    "minimal",
+		NetMode:    "blocked",
+		FsMode:     "strict",
+		Requisites: "requisites-minimal.txt",
+	}
+
+	err := WriteCache(cacheDir, config, projectDir)
+	if err != nil {
+		t.Fatalf("WriteCache should succeed with embedded minimal fallback, got: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(cacheDir, "requisites.txt"))
+	if err != nil {
+		t.Fatalf("cannot read cached requisites.txt: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "bash") {
+		t.Error("embedded requisites-minimal.txt should contain 'bash'")
+	}
+	// minimal profile should NOT have git as a standalone tool
+	// (but grep/egrep/fgrep are present — check line-by-line)
+	hasGitLine := false
+	for _, line := range strings.Split(content, "\n") {
+		if strings.TrimSpace(line) == "git" {
+			hasGitLine = true
+			break
+		}
+	}
+	if hasGitLine {
+		t.Error("embedded requisites-minimal.txt should NOT contain 'git' as a tool")
+	}
+}
+
+func TestWriteCacheErrorsOnUnknownRequisites(t *testing.T) {
+	projectDir := t.TempDir()
+	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+
+	config := &ResolvedConfig{
+		Profile:    "default",
+		NetMode:    "blocked",
+		FsMode:     "workspace",
+		Requisites: "nonexistent-requisites.txt",
+	}
+
+	err := WriteCache(cacheDir, config, projectDir)
+	if err == nil {
+		t.Fatal("WriteCache should error on unknown requisites file not found on disk or embedded")
+	}
+	if !strings.Contains(err.Error(), "cannot read requisites file") {
+		t.Errorf("expected 'cannot read requisites file' in error, got: %v", err)
+	}
+}

@@ -2,10 +2,16 @@ package main
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os"
 	"strings"
 )
+
+// ── Embedded Default Policy ─────────────────────────────
+
+//go:embed policy.toml
+var embeddedDefaultPolicy []byte
 
 // ── Policy Types ────────────────────────────────────────
 
@@ -149,6 +155,91 @@ func ParsePolicy(path string) (*Policy, error) {
 	}
 
 	return policy, nil
+}
+
+// ParsePolicyBytes parses a policy.toml from raw bytes. The filename
+// parameter is used only in error messages. This avoids writing a temp
+// file when using the embedded default policy.
+func ParsePolicyBytes(data []byte, filename string) (*Policy, error) {
+	sections := make(map[string]map[string]interface{})
+	var currentSection string
+
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	lineNum := 0
+	for scanner.Scan() {
+		lineNum++
+		line := scanner.Text()
+		trimmed := strings.TrimSpace(line)
+
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		if strings.HasPrefix(trimmed, "[[") {
+			return nil, fmt.Errorf("[sandflox] ERROR: %s line %d: unsupported TOML feature: array of tables ([[...]])", filename, lineNum)
+		}
+
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			sectionName := trimmed[1 : len(trimmed)-1]
+			sectionName = strings.TrimSpace(sectionName)
+			if sectionName == "" {
+				return nil, fmt.Errorf("[sandflox] ERROR: %s line %d: empty section header", filename, lineNum)
+			}
+			currentSection = sectionName
+			if _, exists := sections[currentSection]; !exists {
+				sections[currentSection] = make(map[string]interface{})
+			}
+			continue
+		}
+
+		eqIdx := strings.Index(trimmed, "=")
+		if eqIdx < 0 {
+			return nil, fmt.Errorf("[sandflox] ERROR: %s line %d: expected key = value, got %q", filename, lineNum, trimmed)
+		}
+
+		key := strings.TrimSpace(trimmed[:eqIdx])
+		rawValue := strings.TrimSpace(trimmed[eqIdx+1:])
+
+		if key == "" {
+			return nil, fmt.Errorf("[sandflox] ERROR: %s line %d: empty key", filename, lineNum)
+		}
+
+		value, err := parseValue(rawValue, lineNum)
+		if err != nil {
+			return nil, err
+		}
+
+		if currentSection == "" {
+			if _, exists := sections[""]; !exists {
+				sections[""] = make(map[string]interface{})
+			}
+			sections[""][key] = value
+		} else {
+			sections[currentSection][key] = value
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("[sandflox] ERROR: reading %s: %w", filename, err)
+	}
+
+	policy, err := mapToPolicy(sections)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validatePolicy(policy); err != nil {
+		return nil, err
+	}
+
+	return policy, nil
+}
+
+// DefaultPolicy returns the embedded default policy parsed from the
+// built-in policy.toml. Used by `sandflox init` and `sandflox prepare`
+// fallback when no policy.toml is found.
+func DefaultPolicy() (*Policy, error) {
+	return ParsePolicyBytes(embeddedDefaultPolicy, "embedded:policy.toml")
 }
 
 // parseValue parses a TOML value from the right side of key = value.

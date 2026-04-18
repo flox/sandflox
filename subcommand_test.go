@@ -65,6 +65,18 @@ func TestExtractSubcommand(t *testing.T) {
 			wantCmd:  "elevate",
 			wantArgs: []string{},
 		},
+		{
+			name:     "prepare alone",
+			args:     []string{"prepare"},
+			wantCmd:  "prepare",
+			wantArgs: []string{},
+		},
+		{
+			name:     "init alone",
+			args:     []string{"init"},
+			wantCmd:  "init",
+			wantArgs: []string{},
+		},
 	}
 
 	for _, tt := range tests {
@@ -351,7 +363,8 @@ func TestStatusNoCache(t *testing.T) {
 // ── Elevate detection tests ──────────────────────────────
 
 func TestElevateAlreadySandboxed(t *testing.T) {
-	t.Setenv("SANDFLOX_ENABLED", "1")
+	// SANDFLOX_SANDBOX=1 means kernel enforcement is already active
+	t.Setenv("SANDFLOX_SANDBOX", "1")
 	t.Setenv("FLOX_ENV", "/some/path")
 
 	var buf bytes.Buffer
@@ -365,6 +378,19 @@ func TestElevateAlreadySandboxed(t *testing.T) {
 	}
 	if !strings.Contains(msg, "Already sandboxed") {
 		t.Errorf("expected 'Already sandboxed' message, got %q", msg)
+	}
+}
+
+// TestElevateFromFloxSbxSession verifies that SANDFLOX_ENABLED=1 (set by
+// manifest [vars]) does NOT block elevate. Only SANDFLOX_SANDBOX=1 blocks.
+func TestElevateFromFloxSbxSession(t *testing.T) {
+	t.Setenv("SANDFLOX_ENABLED", "1")
+	t.Setenv("FLOX_ENV", "/some/flox/env")
+	t.Setenv("SANDFLOX_SANDBOX", "")
+
+	msg, code := checkElevatePrereqs()
+	if msg != "" {
+		t.Errorf("SANDFLOX_ENABLED=1 should NOT block elevate, got msg=%q code=%d", msg, code)
 	}
 }
 
@@ -457,5 +483,236 @@ func TestDiscoverCacheDir(t *testing.T) {
 	got = discoverCacheDir(flags)
 	if got != sandfloxCache {
 		t.Errorf("discoverCacheDir env var: got %q, want %q", got, sandfloxCache)
+	}
+}
+
+// ── Prepare output tests ────────────────────────────────
+
+func TestPrepareOutput(t *testing.T) {
+	dir := setupValidateProject(t)
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	flags := &CLIFlags{
+		PolicyPath: filepath.Join(dir, "policy.toml"),
+	}
+
+	code := runPrepareWithExitCode(flags)
+	if code != 0 {
+		t.Fatalf("runPrepare returned exit code %d, want 0. stderr: %s", code, buf.String())
+	}
+
+	output := buf.String()
+
+	// Must contain the "Prepared:" summary line with tool count, profile, modes
+	if !strings.Contains(output, "[sandflox] Prepared:") {
+		t.Errorf("expected '[sandflox] Prepared:' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "5 tools") {
+		t.Errorf("expected '5 tools' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "default") {
+		t.Errorf("expected 'default' profile in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "net:blocked") {
+		t.Errorf("expected 'net:blocked' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "fs:workspace") {
+		t.Errorf("expected 'fs:workspace' in output, got:\n%s", output)
+	}
+}
+
+func TestPrepareUsesFloxEnvCache(t *testing.T) {
+	dir := setupValidateProject(t)
+
+	// Set FLOX_ENV_CACHE to a separate temp dir
+	envCacheDir := t.TempDir()
+	t.Setenv("FLOX_ENV_CACHE", envCacheDir)
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	flags := &CLIFlags{
+		PolicyPath: filepath.Join(dir, "policy.toml"),
+	}
+
+	code := runPrepareWithExitCode(flags)
+	if code != 0 {
+		t.Fatalf("runPrepare returned exit code %d, want 0. stderr: %s", code, buf.String())
+	}
+
+	// Artifacts should land in $FLOX_ENV_CACHE/sandflox/, NOT in projectDir
+	expectedCache := filepath.Join(envCacheDir, "sandflox")
+	if _, err := os.Stat(filepath.Join(expectedCache, "config.json")); err != nil {
+		t.Errorf("config.json not found in FLOX_ENV_CACHE path %s: %v", expectedCache, err)
+	}
+	if _, err := os.Stat(filepath.Join(expectedCache, "entrypoint.sh")); err != nil {
+		t.Errorf("entrypoint.sh not found in FLOX_ENV_CACHE path %s: %v", expectedCache, err)
+	}
+
+	// Should NOT be in project dir
+	projectCache := filepath.Join(dir, ".flox", "cache", "sandflox", "config.json")
+	if _, err := os.Stat(projectCache); err == nil {
+		t.Errorf("artifacts should NOT be in project dir when FLOX_ENV_CACHE is set, but found %s", projectCache)
+	}
+}
+
+func TestPrepareWithoutPolicyUsesDefault(t *testing.T) {
+	dir := t.TempDir() // empty dir -- no policy.toml
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	flags := &CLIFlags{
+		PolicyPath: filepath.Join(dir, "policy.toml"),
+	}
+
+	code := runPrepareWithExitCode(flags)
+	if code != 0 {
+		t.Fatalf("runPrepare with no policy should fall back to embedded default and return 0, got %d. stderr: %s", code, buf.String())
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "WARNING: no policy.toml -- using embedded default") {
+		t.Errorf("expected embedded default warning in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "[sandflox] Prepared:") {
+		t.Errorf("expected Prepared summary in output, got:\n%s", output)
+	}
+}
+
+// ── Init subcommand tests ────────────────────────────────
+
+func TestInitCreatesPolicy(t *testing.T) {
+	dir := t.TempDir()
+
+	// Change to the temp dir so init writes there
+	origDir, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(origDir)
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	code := runInitWithExitCode(&CLIFlags{})
+	if code != 0 {
+		t.Fatalf("runInit returned exit code %d, want 0. stderr: %s", code, buf.String())
+	}
+
+	// Verify file exists
+	policyPath := filepath.Join(dir, "policy.toml")
+	data, err := os.ReadFile(policyPath)
+	if err != nil {
+		t.Fatalf("policy.toml not created: %v", err)
+	}
+
+	// Verify it's valid TOML by parsing it
+	_, err = ParsePolicyBytes(data, "test:policy.toml")
+	if err != nil {
+		t.Errorf("created policy.toml is not valid: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "Created policy.toml") {
+		t.Errorf("expected 'Created policy.toml' in output, got:\n%s", output)
+	}
+}
+
+func TestInitSkipsExisting(t *testing.T) {
+	dir := t.TempDir()
+
+	// Write an existing policy.toml with custom content
+	existing := []byte("# custom policy\n")
+	policyPath := filepath.Join(dir, "policy.toml")
+	os.WriteFile(policyPath, existing, 0644)
+
+	origDir, _ := os.Getwd()
+	os.Chdir(dir)
+	defer os.Chdir(origDir)
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	code := runInitWithExitCode(&CLIFlags{})
+	if code != 0 {
+		t.Fatalf("runInit with existing policy should return 0, got %d", code)
+	}
+
+	// Verify file was NOT overwritten
+	data, _ := os.ReadFile(policyPath)
+	if string(data) != string(existing) {
+		t.Errorf("existing policy.toml was modified: got %q, want %q", string(data), string(existing))
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "already exists") {
+		t.Errorf("expected 'already exists' in output, got:\n%s", output)
+	}
+}
+
+func TestPrepareCreatesArtifactsWithEmbeddedDefault(t *testing.T) {
+	dir := t.TempDir() // no policy.toml on disk
+
+	// Set FLOX_ENV_CACHE so artifacts go to a known location
+	envCacheDir := t.TempDir()
+	t.Setenv("FLOX_ENV_CACHE", envCacheDir)
+
+	var buf bytes.Buffer
+	origStderr := stderr
+	stderr = &buf
+	defer func() { stderr = origStderr }()
+
+	flags := &CLIFlags{
+		PolicyPath: filepath.Join(dir, "policy.toml"),
+	}
+
+	code := runPrepareWithExitCode(flags)
+	if code != 0 {
+		t.Fatalf("runPrepare with embedded default should return 0, got %d. stderr: %s", code, buf.String())
+	}
+
+	// Verify entrypoint.sh was generated
+	entrypointPath := filepath.Join(envCacheDir, "sandflox", "entrypoint.sh")
+	if _, err := os.Stat(entrypointPath); err != nil {
+		t.Errorf("entrypoint.sh not found at %s: %v", entrypointPath, err)
+	}
+
+	// Verify config.json was generated
+	configPath := filepath.Join(envCacheDir, "sandflox", "config.json")
+	if _, err := os.Stat(configPath); err != nil {
+		t.Errorf("config.json not found at %s: %v", configPath, err)
+	}
+
+	// Verify fs-filter.sh was generated
+	fsFilterPath := filepath.Join(envCacheDir, "sandflox", "fs-filter.sh")
+	if _, err := os.Stat(fsFilterPath); err != nil {
+		t.Errorf("fs-filter.sh not found at %s: %v", fsFilterPath, err)
+	}
+}
+
+func TestDefaultPolicyParses(t *testing.T) {
+	policy, err := DefaultPolicy()
+	if err != nil {
+		t.Fatalf("DefaultPolicy() failed: %v", err)
+	}
+	if policy.Meta.Version != "2" {
+		t.Errorf("embedded policy version = %q, want \"2\"", policy.Meta.Version)
+	}
+	if policy.Meta.Profile != "default" {
+		t.Errorf("embedded policy profile = %q, want \"default\"", policy.Meta.Profile)
+	}
+	if policy.Network.Mode != "blocked" {
+		t.Errorf("embedded policy network mode = %q, want \"blocked\"", policy.Network.Mode)
 	}
 }

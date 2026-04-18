@@ -27,6 +27,8 @@ var knownSubcommands = map[string]bool{
 	"validate": true,
 	"status":   true,
 	"elevate":  true,
+	"prepare":  true,
+	"init":     true,
 }
 
 // ── Subcommand Extraction ───────────────────────────────
@@ -217,8 +219,12 @@ func runStatusInternal(cacheDir string, debug bool) int {
 // Testable: does not call os.Exit. runElevate calls os.Exit based on
 // the returned values.
 func checkElevatePrereqs() (string, int) {
-	// 1. Re-entry detection: already sandboxed
-	if os.Getenv("SANDFLOX_ENABLED") == "1" {
+	// 1. Re-entry detection: kernel enforcement already active
+	// SANDFLOX_SANDBOX is set only at the syscall.Exec boundary when
+	// launching under sandbox-exec. SANDFLOX_ENABLED means "this is a
+	// sandflox environment" (set by manifest [vars]) and must NOT block
+	// elevate -- that's the whole point of the elevate workflow.
+	if os.Getenv("SANDFLOX_SANDBOX") == "1" {
 		return "[sandflox] Already sandboxed -- nothing to do.\n", 0
 	}
 	// 2. Flox session detection: not in a flox session
@@ -288,9 +294,119 @@ func runElevateWithExitCode(flags *CLIFlags) int {
 	emitDiagnostics(config, projectDir, flags.Debug)
 
 	// 10. Call platform-specific exec (does not return on success)
-	elevateExec(config, projectDir, entrypointPath)
+	elevateExec(config, projectDir, cacheDir, entrypointPath)
 
 	// If we reach here on darwin, elevateExec already called os.Exit(1)
 	// On non-darwin, elevateExec prints error and exits -- but just in case:
 	return 1
+}
+
+// ── Prepare Handler ─────────────────────────────────────
+
+// runPrepare generates all enforcement artifacts without launching a
+// sandbox or exec'ing into kernel enforcement. Designed for use in
+// flox manifest hooks: `sandflox prepare -policy policy.toml` writes
+// cache artifacts so that profile scripts can source entrypoint.sh.
+func runPrepare(flags *CLIFlags) {
+	os.Exit(runPrepareWithExitCode(flags))
+}
+
+// runPrepareWithExitCode is the testable core of runPrepare. Returns the
+// exit code instead of calling os.Exit.
+func runPrepareWithExitCode(flags *CLIFlags) int {
+	// 1. Determine project directory
+	projectDir := resolveProjectDir(flags)
+
+	// 2. Find and parse policy.toml
+	policyPath := filepath.Join(projectDir, "policy.toml")
+	if flags.PolicyPath != "" {
+		policyPath = flags.PolicyPath
+	}
+
+	policy, err := ParsePolicy(policyPath)
+	if err != nil {
+		// If policy.toml doesn't exist, fall back to embedded default
+		if os.IsNotExist(unwrapPathError(err)) {
+			fmt.Fprintf(stderr, "[sandflox] WARNING: no policy.toml -- using embedded default\n")
+			policy, err = DefaultPolicy()
+			if err != nil {
+				fmt.Fprintf(stderr, "[sandflox] ERROR: embedded policy parse failed: %v\n", err)
+				return 1
+			}
+		} else {
+			fmt.Fprintf(stderr, "[sandflox] ERROR: %v\n", err)
+			return 1
+		}
+	}
+
+	// 3. Resolve config
+	config := ResolveConfig(policy, flags, projectDir)
+
+	// 4. Determine cache dir: FLOX_ENV_CACHE preferred (consumer env),
+	//    else project-relative (developer env)
+	cacheDir := filepath.Join(projectDir, ".flox", "cache", "sandflox")
+	if floxEnvCache := os.Getenv("FLOX_ENV_CACHE"); floxEnvCache != "" {
+		cacheDir = filepath.Join(floxEnvCache, "sandflox")
+	}
+
+	// 5. Write cache artifacts
+	if err := WriteCache(cacheDir, config, projectDir); err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+
+	// 6. Generate shell enforcement artifacts
+	if err := WriteShellArtifacts(cacheDir, config); err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return 1
+	}
+
+	// 7. Count tools from cached requisites
+	tools, err := ParseRequisites(filepath.Join(cacheDir, "requisites.txt"))
+	toolCount := 0
+	if err == nil {
+		toolCount = len(tools)
+	}
+
+	// 8. Print summary
+	fmt.Fprintf(stderr, "[sandflox] Prepared: %d tools | %s | net:%s fs:%s\n",
+		toolCount, config.Profile, config.NetMode, config.FsMode)
+
+	// 9. Debug mode: emit full diagnostics
+	if flags.Debug {
+		emitDiagnostics(config, projectDir, true)
+	}
+
+	return 0
+}
+
+// ── Init Handler ────────────────────────────────────────
+
+// runInit writes a default policy.toml to the current directory.
+// Exits 0 on success, 1 on error. If policy.toml already exists, prints
+// a notice and exits 0 (idempotent).
+func runInit(flags *CLIFlags) {
+	os.Exit(runInitWithExitCode(flags))
+}
+
+// runInitWithExitCode is the testable core of runInit.
+func runInitWithExitCode(flags *CLIFlags) int {
+	_ = flags // reserved for future use (e.g., --force)
+
+	target := "policy.toml"
+
+	// Check if policy.toml already exists
+	if _, err := os.Stat(target); err == nil {
+		fmt.Fprintf(stderr, "[sandflox] policy.toml already exists -- nothing to do\n")
+		return 0
+	}
+
+	// Write embedded default policy
+	if err := os.WriteFile(target, embeddedDefaultPolicy, 0644); err != nil {
+		fmt.Fprintf(stderr, "[sandflox] ERROR: cannot write policy.toml: %v\n", err)
+		return 1
+	}
+
+	fmt.Fprintf(stderr, "[sandflox] Created policy.toml (default profile, workspace/blocked)\n")
+	return 0
 }

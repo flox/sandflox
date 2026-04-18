@@ -157,7 +157,7 @@ func TestGenerateFsFilter_Wrappers(t *testing.T) {
 
 	// Each write command gets a wrapper
 	for _, cmd := range WriteCmds {
-		assertContains(t, out, `_sfx_real_`+cmd+`="$(command -v `+cmd+` 2>/dev/null)"`)
+		assertContains(t, out, `export _sfx_real_`+cmd+`="$(command -v `+cmd+` 2>/dev/null)"`)
 		assertContains(t, out, cmd+"() {")
 		assertContains(t, out, "export -f "+cmd)
 	}
@@ -342,4 +342,49 @@ func TestWriteShellArtifacts_WritesAllThreeFiles(t *testing.T) {
 		t.Error("entrypoint.sh is empty")
 	}
 	assertContains(t, string(data), `export PATH="$_sfx_bin"`)
+}
+
+// ── Test 12: Bug 2 — physical path resolution (pwd -P) ──
+
+func TestGenerateFsFilter_PhysicalPathResolution(t *testing.T) {
+	cfg := &ResolvedConfig{
+		FsMode:   "workspace",
+		NetMode:  "blocked",
+		Writable: []string{"/proj"},
+	}
+	out, err := GenerateFsFilter(cfg)
+	if err != nil {
+		t.Fatalf("GenerateFsFilter error: %v", err)
+	}
+	assertContains(t, out, "pwd -P")
+	assertNotContains(t, out, "&& pwd)")
+}
+
+// ── Test 13: SANDFLOX_ENABLED=1 exported in entrypoint ───
+
+func TestGenerateEntrypoint_SetsSandfloxEnabled(t *testing.T) {
+	cfg := &ResolvedConfig{
+		FsMode:  "workspace",
+		NetMode: "blocked",
+	}
+	out, err := GenerateEntrypoint(cfg)
+	if err != nil {
+		t.Fatalf("GenerateEntrypoint error: %v", err)
+	}
+	assertContains(t, out, `export SANDFLOX_ENABLED=1`)
+}
+
+// ── Test 14: Bug 3 — sandflox auto-include in entrypoint ─
+
+func TestGenerateEntrypoint_SandfloxAutoInclude(t *testing.T) {
+	cfg := &ResolvedConfig{
+		FsMode:  "workspace",
+		NetMode: "blocked",
+	}
+	out, err := GenerateEntrypoint(cfg)
+	if err != nil {
+		t.Fatalf("GenerateEntrypoint error: %v", err)
+	}
+	assertContains(t, out, `"${FLOX_ENV}/bin/sandflox"`)
+	assertContains(t, out, `"${_sfx_bin}/sandflox"`)
 }

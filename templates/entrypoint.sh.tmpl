@@ -23,6 +23,12 @@ if [ -f "$_sfx_req" ]; then
     fi
   done < "$_sfx_req"
 
+  # SHELL-09: auto-include sandflox binary for status/elevate inside sandbox
+  if [ -x "${FLOX_ENV}/bin/sandflox" ]; then
+    ln -sf "${FLOX_ENV}/bin/sandflox" "${_sfx_bin}/sandflox"
+    _sfx_count=$((_sfx_count + 1))
+  fi
+
   # SHELL-07: remove curl from bin when network is blocked
   if [ -f "${FLOX_ENV_CACHE}/sandflox/net-blocked.flag" ]; then
     if [ -L "${_sfx_bin}/curl" ]; then
@@ -33,6 +39,8 @@ if [ -f "$_sfx_req" ]; then
 
   # SHELL-01: PATH wipe -- only requisites-filtered bin
   export PATH="$_sfx_bin"
+  # Ensure SANDFLOX_ENABLED is set for sandflox status/elevate detection
+  export SANDFLOX_ENABLED=1
   _sfx_profile_name="default"
   [ -f "${FLOX_ENV_CACHE}/sandflox/active-profile.txt" ] && \
     read -r _sfx_profile_name < "${FLOX_ENV_CACHE}/sandflox/active-profile.txt" 2>/dev/null

@@ -1,0 +1,48 @@
+# sandflox v2 — Declarative Policy
+# ──────────────────────────────────────────────────────────
+# This file defines the security policy for sandflox kernel enforcement.
+# Used by the ./sandflox wrapper to generate sandbox-exec (macOS) or
+# bwrap (Linux) configurations. Shell-level enforcement (fs-filter,
+# binary whitelist) also reads this policy for defense-in-depth.
+
+[meta]
+version = "2"
+profile = "default"              # selects from [profiles.*] below
+
+[network]
+mode = "blocked"                 # "unrestricted" | "blocked"
+# sandbox-exec and bwrap operate at socket level — no domain filtering.
+# Shell-level curl wrappers provide best-effort domain filtering as
+# defense-in-depth; actual domain filtering requires a proxy (out of scope).
+allow-localhost = true           # allow loopback even when blocked
+
+[filesystem]
+mode = "workspace"               # "permissive" | "workspace" | "strict"
+writable = [".", "/tmp"]         # relative to project root; used in workspace mode
+read-only = [".flox/env/", ".git/", ".env", "policy.toml", "requisites.txt"]
+denied = ["~/.ssh/", "~/.gnupg/", "~/.aws/", "~/.config/gcloud/", "~/.config/gh/"]
+
+# ── Security hardening ──────────────────────────────────
+# Environment scrubbing: only allowlisted vars pass into the sandbox.
+# Add vars here that your workflow needs but sandflox blocks by default.
+[security]
+env-passthrough = []
+
+# ── Profile presets ──────────────────────────────────────
+# Override network/filesystem/requisites per use case.
+# Select via SANDFLOX_PROFILE env var or [meta] profile.
+
+[profiles.minimal]
+requisites = "requisites-minimal.txt"
+network = "blocked"
+filesystem = "strict"
+
+[profiles.default]
+requisites = "requisites.txt"
+network = "blocked"
+filesystem = "workspace"
+
+[profiles.full]
+requisites = "requisites-full.txt"
+network = "unrestricted"
+filesystem = "permissive"

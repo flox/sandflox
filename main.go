@@ -36,6 +36,10 @@ func main() {
 		runStatus(flags)
 	case "elevate":
 		runElevate(flags)
+	case "prepare":
+		runPrepare(flags)
+	case "init":
+		runInit(flags)
 	default:
 		// Original pipeline (steps 2-8)
 		runDefault(flags, userArgs)
@@ -89,7 +93,7 @@ func runDefault(flags *CLIFlags, userArgs []string) {
 	emitDiagnostics(config, projectDir, flags.Debug)
 
 	// 8. Exec into flox activate, wrapped in kernel enforcement when available
-	execWithKernelEnforcement(config, projectDir, entrypointPath, userArgs)
+	execWithKernelEnforcement(config, projectDir, cacheDir, entrypointPath, userArgs)
 }
 
 // ── Project Directory Resolution ────────────────────────

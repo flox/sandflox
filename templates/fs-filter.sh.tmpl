@@ -10,7 +10,7 @@ return 0 2>/dev/null || exit 0
 _sfx_check_write_target() {
   local target="$1"
   local resolved
-  resolved="$(cd "$(dirname "$target")" 2>/dev/null && pwd)/$(basename "$target")" 2>/dev/null || resolved="$target"
+  resolved="$(cd "$(dirname "$target")" 2>/dev/null && pwd -P)/$(basename "$target")" 2>/dev/null || resolved="$target"
 
   # Check denied paths
 {{range .Denied}}  case "$resolved" in {{. | shellquote}}|{{. | shellquote}}/*) echo "[sandflox] BLOCKED: write to {{.}} is denied by policy" >&2; return 126;; esac
@@ -34,7 +34,7 @@ export -f _sfx_check_write_target
 
 # ── Write-command wrappers ───────────────────────────────
 
-{{range .WriteCmds}}_sfx_real_{{.}}="$(command -v {{.}} 2>/dev/null)"
+{{range .WriteCmds}}export _sfx_real_{{.}}="$(command -v {{.}} 2>/dev/null)"
 {{.}}() {
   local _last_arg="${!#}"
   _sfx_check_write_target "$_last_arg" || return 126

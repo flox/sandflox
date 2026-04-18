@@ -20,8 +20,8 @@ var defaultAllowlist = []string{
 	"COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION",
 	// macOS system
 	"TMPDIR",
-	// sandflox's own vars (set by manifest.toml [vars])
-	"SANDFLOX_ENABLED", "SANDFLOX_MODE", "SANDFLOX_PROFILE",
+	// sandflox's own vars (set by manifest.toml [vars] or exec boundary)
+	"SANDFLOX_ENABLED", "SANDFLOX_MODE", "SANDFLOX_PROFILE", "SANDFLOX_SANDBOX",
 }
 
 // allowedPrefixes lists env var prefixes that pass through. Vars matching
