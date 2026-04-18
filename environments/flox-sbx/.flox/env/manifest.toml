@@ -18,9 +18,15 @@
 #
 version = 1
 
+# ── Options ──────────────────────────────────────────────
+# macOS-only: sandbox-exec is Darwin-specific
+[options]
+systems = ["aarch64-darwin", "x86_64-darwin"]
+
 # ── Packages ─────────────────────────────────────────────
 [install]
 sandflox.pkg-path = "8BitTacoSupreme/sandflox"
+sandflox.systems = ["aarch64-darwin"]
 
 bash.pkg-path = "bash"
 coreutils.pkg-path = "coreutils"
