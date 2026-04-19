@@ -21,6 +21,8 @@ sandflox ships as two complementary Flox artifacts:
 
 **The binary** provides CLI commands (`sandflox`, `sandflox validate`, `sandflox elevate`, etc.) and generates enforcement artifacts. **The environment** wires everything together — `flox activate` gives you shell enforcement out of the box, and `sandflox elevate` adds kernel enforcement on top.
 
+**Platform:** aarch64-darwin (ARM Mac). The sandflox binary is currently published for ARM Macs. On x86_64-darwin, `flox-sbx` still provides shell enforcement but `sandflox elevate` is unavailable.
+
 ## Quick Start (Zero Config)
 
 ```bash
@@ -34,7 +36,7 @@ flox activate
 sandflox elevate
 ```
 
-That's it. No `policy.toml` needed — the embedded default policy applies automatically (workspace filesystem mode, blocked network, ~55 tools).
+That's it. No `policy.toml` needed — the embedded default policy applies automatically (workspace filesystem mode, blocked network, ~57 tools).
 
 ## Quick Start (Custom Policy)
 
@@ -119,14 +121,14 @@ Inside the sandbox:
 echo $PATH                    # only the sandflox symlink bin directory
 
 # Package managers are blocked
-which pip                     # not found
-pip install requests          # [sandflox] BLOCKED: pip is not available in this sandbox
+pip install requests          # [sandflox] BLOCKED: pip is not available. Environment is immutable.
 
-# Filesystem writes outside workspace are blocked
-cp /etc/hosts /tmp/stolen     # [sandflox] BLOCKED: write to '/etc/hosts' outside workspace policy
+# Filesystem writes outside workspace are blocked (via wrapped commands)
+cp /etc/hosts /usr/local/x    # [sandflox] BLOCKED: write to "/usr/local/x" outside workspace policy
 
 # Network is blocked at the kernel level
-curl https://example.com      # Operation not permitted
+python3 -c "import urllib.request; urllib.request.urlopen('http://example.com')"
+                              # kernel EPERM — socket() denied
 
 # Credentials are scrubbed
 echo $AWS_SECRET_ACCESS_KEY   # empty (even if set in parent shell)
@@ -149,7 +151,7 @@ Already inside `flox activate` but want sandbox enforcement?
 sandflox elevate
 ```
 
-Re-execs the shell under `sandbox-exec`. Running it again prints "already sandboxed" instead of nesting.
+Re-execs the shell under `sandbox-exec`. No `-policy` flag needed when using `flox-sbx` — the embedded default policy is used automatically. Running `sandflox elevate` again prints "already sandboxed" instead of nesting.
 
 ## Architecture
 
@@ -183,6 +185,8 @@ sandflox (Go binary)
 
 Kernel enforcement returns generic "Operation not permitted". Shell enforcement returns `[sandflox] BLOCKED: ...` — agents can understand and adapt. Environment scrubbing prevents credential leakage even if the agent never hits a kernel deny.
 
+Shell redirections (`>`, `>>`, `|`) are handled by bash before any command runs and cannot be intercepted at the shell tier. Kernel enforcement blocks these at the syscall level — this is why `sandflox elevate` exists.
+
 ### Elevation workflow
 
 ```
@@ -211,7 +215,7 @@ sandflox <subcommand> [flags]
 
 | Flag | Description |
 |------|-------------|
-| `-policy <path>` | Path to policy.toml (default: `./policy.toml`) |
+| `-policy <path>` | Path to policy.toml (default: `./policy.toml`; falls back to embedded default) |
 | `-profile <name>` | Override active profile (beats env var and policy file) |
 | `-net` | Override network to unrestricted |
 | `-debug` | Emit verbose diagnostics to stderr |
@@ -224,7 +228,7 @@ sandflox <subcommand> [flags]
 | `sandflox validate` | Dry-run — print what would be enforced without launching a sandbox |
 | `sandflox prepare` | Generate enforcement artifacts without launching a sandbox (used by flox-sbx hooks) |
 | `sandflox status` | Report active enforcement state from inside a sandboxed session |
-| `sandflox elevate` | Re-exec current flox session under sandbox-exec |
+| `sandflox elevate` | Re-exec current flox session under sandbox-exec (uses embedded default if no policy.toml) |
 
 ### Profile Resolution
 
@@ -265,7 +269,7 @@ sandflox <subcommand> [flags]
 | Profile | Tools | Use case |
 |---------|-------|----------|
 | `requisites-minimal.txt` | ~28 | Read-only inspection. No cp/mv/rm/curl/git. Untrusted agents. |
-| `requisites.txt` | ~55 | Default. Shell utils, text processing, python3, jq, curl, git. |
+| `requisites.txt` | ~57 | Default. Shell utils, text processing, python3, jq, curl, git. |
 | `requisites-full.txt` | ~54+ | All non-manager binaries. Trusted agents needing find, touch, etc. |
 
 ## Customization
@@ -302,6 +306,7 @@ Edit `policy.toml` to change modes, writable paths, or denied paths. Changes tak
 ## Requirements
 
 - macOS (Darwin) — sandbox-exec is macOS-specific
+- aarch64-darwin (ARM Mac) for sandflox binary; x86_64-darwin gets shell enforcement via flox-sbx
 - [Flox](https://flox.dev) 1.10+
 - Your Flox environment must include the tools sandflox will whitelist. The `sandflox`
   binary enforces policy over tools already present in `$FLOX_ENV/bin` — it does not
