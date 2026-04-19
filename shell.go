@@ -66,6 +66,14 @@ func shellquote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
+// trimslash strips trailing slashes from a path string. Policy paths
+// use trailing "/" as a directory indicator, but bash case patterns
+// need clean paths to avoid double-slash mismatches (e.g. "dir//*"
+// won't match "dir/file").
+func trimslash(s string) string {
+	return strings.TrimRight(s, "/")
+}
+
 // ── Template Rendering ──────────────────────────────────
 
 // renderTemplate parses and executes the named template from the
@@ -73,6 +81,7 @@ func shellquote(s string) string {
 func renderTemplate(name string, data shellTemplateData) (string, error) {
 	tmpl, err := template.New(name).Funcs(template.FuncMap{
 		"shellquote": shellquote,
+		"trimslash":  trimslash,
 	}).ParseFS(shellTemplates, "templates/"+name)
 	if err != nil {
 		return "", fmt.Errorf("[sandflox] ERROR: parse template %s: %w", name, err)

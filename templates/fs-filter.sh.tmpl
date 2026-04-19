@@ -13,21 +13,21 @@ _sfx_check_write_target() {
   resolved="$(cd "$(dirname "$target")" 2>/dev/null && pwd -P)/$(basename "$target")" 2>/dev/null || resolved="$target"
 
   # Check denied paths
-{{range .Denied}}  case "$resolved" in {{. | shellquote}}|{{. | shellquote}}/*) echo "[sandflox] BLOCKED: write to {{.}} is denied by policy" >&2; return 126;; esac
+{{range .Denied}}  case "$resolved" in {{. | trimslash | shellquote}}|{{. | trimslash | shellquote}}/*) echo "[sandflox] BLOCKED: write to {{.}} is denied by policy" >&2; return 126;; esac
 {{end}}
 {{if eq .FsMode "strict"}}  # Strict mode: all writes blocked
   echo "[sandflox] BLOCKED: filesystem is read-only (strict mode)" >&2
   return 126
 {{else}}  # Check writable paths
   local _allowed=0
-{{range .Writable}}  case "$resolved" in {{. | shellquote}}|{{. | shellquote}}/*) _allowed=1;; esac
+{{range .Writable}}  case "$resolved" in {{. | trimslash | shellquote}}|{{. | trimslash | shellquote}}/*) _allowed=1;; esac
 {{end}}  if [ "$_allowed" -eq 0 ]; then
     echo "[sandflox] BLOCKED: write to \"$target\" outside workspace policy" >&2
     return 126
   fi
 
   # Check read-only overrides
-{{range .ReadOnly}}  case "$resolved" in {{. | shellquote}}|{{. | shellquote}}/*) echo "[sandflox] BLOCKED: \"$target\" is read-only by policy" >&2; return 126;; esac
+{{range .ReadOnly}}  case "$resolved" in {{. | trimslash | shellquote}}|{{. | trimslash | shellquote}}/*) echo "[sandflox] BLOCKED: \"$target\" is read-only by policy" >&2; return 126;; esac
 {{end}}{{end}}  return 0
 }
 export -f _sfx_check_write_target
