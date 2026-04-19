@@ -9,6 +9,10 @@ buildGoModule {
     fileset = lib.fileset.unions [
       (lib.fileset.fileFilter (file: lib.hasSuffix ".go" file.name) ../../.)
       ../../go.mod
+      ../../policy.toml  # //go:embed policy.toml -- embedded default policy
+      ../../requisites.txt  # //go:embed requisites*.txt -- per-profile binary whitelists
+      ../../requisites-minimal.txt
+      ../../requisites-full.txt
       ../../templates  # //go:embed templates/*.tmpl -- shell enforcement templates
     ];
   };
