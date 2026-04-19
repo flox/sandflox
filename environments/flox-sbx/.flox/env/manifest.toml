@@ -16,7 +16,7 @@
 #   flox activate          # shell enforcement active
 #   sandflox elevate       # adds kernel tier
 #
-version = 1
+schema-version = "1.11.0"
 
 # ── Options ──────────────────────────────────────────────
 # macOS-only: sandbox-exec is Darwin-specific
@@ -29,17 +29,28 @@ sandflox.pkg-path = "8BitTacoSupreme/sandflox"
 sandflox.systems = ["aarch64-darwin"]
 
 bash.pkg-path = "bash"
+bash.outputs = "all"
 coreutils.pkg-path = "coreutils"
+coreutils.outputs = "all"
 python3.pkg-path = "python3"
 jq.pkg-path = "jq"
+jq.outputs = "all"
 curl.pkg-path = "curl"
+curl.outputs = "all"
 git.pkg-path = "git"
+git.outputs = "all"
 gnugrep.pkg-path = "gnugrep"
+gnugrep.outputs = "all"
 gnused.pkg-path = "gnused"
+gnused.outputs = "all"
 gawk.pkg-path = "gawk"
+gawk.outputs = "all"
 findutils.pkg-path = "findutils"
+findutils.outputs = "all"
 diffutils.pkg-path = "diffutils"
+diffutils.outputs = "all"
 file.pkg-path = "file"
+file.outputs = "all"
 
 # claude-code: install via `npm install -g @anthropic/claude-code`
 # after activation (before function armor applies). Or add nodejs

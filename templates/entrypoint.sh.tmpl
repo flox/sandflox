@@ -8,8 +8,11 @@ _sfx_req="${FLOX_ENV_CACHE}/sandflox/requisites.txt"
 
 if [ -f "$_sfx_req" ]; then
   _sfx_bin="${FLOX_ENV_CACHE}/sandflox/bin"
-  rm -rf "$_sfx_bin"
-  mkdir -p "$_sfx_bin"
+  # Use absolute paths from FLOX_ENV/bin for setup commands -- when
+  # sourced by `sandflox elevate`, PATH may already be restricted to
+  # the symlink bin and bare rm/mkdir/ln won't be found.
+  "${FLOX_ENV}/bin/rm" -rf "$_sfx_bin"
+  "${FLOX_ENV}/bin/mkdir" -p "$_sfx_bin"
   _sfx_count=0
 
   while IFS= read -r _sfx_line || [ -n "$_sfx_line" ]; do
@@ -18,21 +21,21 @@ if [ -f "$_sfx_req" ]; then
     _sfx_tool="${_sfx_tool%%	*}"
     [ -z "$_sfx_tool" ] && continue
     if [ -x "${FLOX_ENV}/bin/$_sfx_tool" ]; then
-      ln -sf "${FLOX_ENV}/bin/$_sfx_tool" "${_sfx_bin}/$_sfx_tool"
+      "${FLOX_ENV}/bin/ln" -sf "${FLOX_ENV}/bin/$_sfx_tool" "${_sfx_bin}/$_sfx_tool"
       _sfx_count=$((_sfx_count + 1))
     fi
   done < "$_sfx_req"
 
   # SHELL-09: auto-include sandflox binary for status/elevate inside sandbox
   if [ -x "${FLOX_ENV}/bin/sandflox" ]; then
-    ln -sf "${FLOX_ENV}/bin/sandflox" "${_sfx_bin}/sandflox"
+    "${FLOX_ENV}/bin/ln" -sf "${FLOX_ENV}/bin/sandflox" "${_sfx_bin}/sandflox"
     _sfx_count=$((_sfx_count + 1))
   fi
 
   # SHELL-07: remove curl from bin when network is blocked
   if [ -f "${FLOX_ENV_CACHE}/sandflox/net-blocked.flag" ]; then
     if [ -L "${_sfx_bin}/curl" ]; then
-      rm -f "${_sfx_bin}/curl"
+      "${FLOX_ENV}/bin/rm" -f "${_sfx_bin}/curl"
       _sfx_count=$((_sfx_count - 1))
     fi
   fi

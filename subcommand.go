@@ -263,8 +263,19 @@ func runElevateWithExitCode(flags *CLIFlags) int {
 
 	policy, err := ParsePolicy(policyPath)
 	if err != nil {
-		fmt.Fprintf(stderr, "[sandflox] ERROR: %v\n", err)
-		return 1
+		// If policy.toml doesn't exist, fall back to embedded default
+		// (same logic as prepare -- consumer envs have no policy.toml)
+		if os.IsNotExist(unwrapPathError(err)) {
+			fmt.Fprintf(stderr, "[sandflox] WARNING: no policy.toml -- using embedded default\n")
+			policy, err = DefaultPolicy()
+			if err != nil {
+				fmt.Fprintf(stderr, "[sandflox] ERROR: embedded policy parse failed: %v\n", err)
+				return 1
+			}
+		} else {
+			fmt.Fprintf(stderr, "[sandflox] ERROR: %v\n", err)
+			return 1
+		}
 	}
 
 	// 5. Resolve config

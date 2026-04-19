@@ -81,9 +81,11 @@ func buildSandboxExecArgv(sbplPath, projectDir, home, floxCachePath, floxAbsPath
 //  5. Build argv via buildSandboxExecArgv with entrypointPath
 //  6. syscall.Exec -- does not return on success; error path is hard error (Pitfall 1)
 func execWithKernelEnforcement(cfg *ResolvedConfig, projectDir string, cacheDir string, entrypointPath string, userArgs []string) {
-	// 1. Preflight: sandbox-exec availability
-	sbxPath, err := exec.LookPath("sandbox-exec")
-	if err != nil {
+	// 1. Preflight: sandbox-exec availability.
+	// Use absolute path -- sandbox-exec is a macOS system binary at a
+	// fixed location; LookPath may fail if PATH is already restricted.
+	sbxPath := "/usr/bin/sandbox-exec"
+	if _, err := os.Stat(sbxPath); err != nil {
 		fmt.Fprintf(stderr, "[sandflox] WARNING: sandbox-exec not found -- falling back to shell-only\n")
 		execFlox(cfg, userArgs)
 		return
@@ -172,10 +174,12 @@ func buildElevateArgv(sbplPath, projectDir, home, floxCachePath, entrypointPath 
 //  5. Sanitize env via BuildSanitizedEnv
 //  6. syscall.Exec (does not return on success)
 func elevateExec(cfg *ResolvedConfig, projectDir, cacheDir, entrypointPath string) {
-	// 1. Preflight: sandbox-exec is mandatory for elevate
-	sbxPath, err := exec.LookPath("sandbox-exec")
-	if err != nil {
-		fmt.Fprintf(stderr, "[sandflox] ERROR: sandbox-exec not found -- cannot elevate\n")
+	// 1. Preflight: sandbox-exec is mandatory for elevate.
+	// Use absolute path -- inside a sandflox session, PATH is restricted
+	// to the symlink bin and /usr/bin is not on PATH.
+	sbxPath := "/usr/bin/sandbox-exec"
+	if _, err := os.Stat(sbxPath); err != nil {
+		fmt.Fprintf(stderr, "[sandflox] ERROR: sandbox-exec not found at %s -- cannot elevate\n", sbxPath)
 		os.Exit(1)
 	}
 
