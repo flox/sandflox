@@ -112,32 +112,32 @@ common = """
       echo "[sandflox] BLOCKED: $1 is not available. Environment is immutable." >&2
       return 126
     }
-    flox() { _sandflox_blocked flox; }
-    nix() { _sandflox_blocked nix; }
-    nix-env() { _sandflox_blocked nix-env; }
-    nix-store() { _sandflox_blocked nix-store; }
-    nix-shell() { _sandflox_blocked nix-shell; }
-    nix-build() { _sandflox_blocked nix-build; }
-    apt() { _sandflox_blocked apt; }
-    apt-get() { _sandflox_blocked apt-get; }
-    yum() { _sandflox_blocked yum; }
-    dnf() { _sandflox_blocked dnf; }
-    brew() { _sandflox_blocked brew; }
-    snap() { _sandflox_blocked snap; }
-    flatpak() { _sandflox_blocked flatpak; }
-    pip() { _sandflox_blocked pip; }
-    pip3() { _sandflox_blocked pip3; }
-    npm() { _sandflox_blocked npm; }
-    npx() { _sandflox_blocked npx; }
-    yarn() { _sandflox_blocked yarn; }
-    pnpm() { _sandflox_blocked pnpm; }
-    cargo() { _sandflox_blocked cargo; }
-    go() { _sandflox_blocked go; }
-    gem() { _sandflox_blocked gem; }
-    composer() { _sandflox_blocked composer; }
-    uv() { _sandflox_blocked uv; }
-    docker() { _sandflox_blocked docker; }
-    podman() { _sandflox_blocked podman; }
+    unalias flox 2>/dev/null; flox() { _sandflox_blocked flox; }
+    unalias nix 2>/dev/null; nix() { _sandflox_blocked nix; }
+    unalias nix-env 2>/dev/null; nix-env() { _sandflox_blocked nix-env; }
+    unalias nix-store 2>/dev/null; nix-store() { _sandflox_blocked nix-store; }
+    unalias nix-shell 2>/dev/null; nix-shell() { _sandflox_blocked nix-shell; }
+    unalias nix-build 2>/dev/null; nix-build() { _sandflox_blocked nix-build; }
+    unalias apt 2>/dev/null; apt() { _sandflox_blocked apt; }
+    unalias apt-get 2>/dev/null; apt-get() { _sandflox_blocked apt-get; }
+    unalias yum 2>/dev/null; yum() { _sandflox_blocked yum; }
+    unalias dnf 2>/dev/null; dnf() { _sandflox_blocked dnf; }
+    unalias brew 2>/dev/null; brew() { _sandflox_blocked brew; }
+    unalias snap 2>/dev/null; snap() { _sandflox_blocked snap; }
+    unalias flatpak 2>/dev/null; flatpak() { _sandflox_blocked flatpak; }
+    unalias pip 2>/dev/null; pip() { _sandflox_blocked pip; }
+    unalias pip3 2>/dev/null; pip3() { _sandflox_blocked pip3; }
+    unalias npm 2>/dev/null; npm() { _sandflox_blocked npm; }
+    unalias npx 2>/dev/null; npx() { _sandflox_blocked npx; }
+    unalias yarn 2>/dev/null; yarn() { _sandflox_blocked yarn; }
+    unalias pnpm 2>/dev/null; pnpm() { _sandflox_blocked pnpm; }
+    unalias cargo 2>/dev/null; cargo() { _sandflox_blocked cargo; }
+    unalias go 2>/dev/null; go() { _sandflox_blocked go; }
+    unalias gem 2>/dev/null; gem() { _sandflox_blocked gem; }
+    unalias composer 2>/dev/null; composer() { _sandflox_blocked composer; }
+    unalias uv 2>/dev/null; uv() { _sandflox_blocked uv; }
+    unalias docker 2>/dev/null; docker() { _sandflox_blocked docker; }
+    unalias podman 2>/dev/null; podman() { _sandflox_blocked podman; }
     export -f _sandflox_blocked flox nix nix-env nix-store nix-shell nix-build apt apt-get yum dnf brew snap flatpak pip pip3 npm npx yarn pnpm cargo go gem composer uv docker podman
 
     # Python safety flags
