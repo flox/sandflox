@@ -100,8 +100,19 @@ on-activate = """
       echo "[flox-sbx] WARNING: sandflox prepare failed -- profile fallback will apply" >&2
   fi
 
+  # ── Shell startup deps ─────────────────────────────────
+  # /etc/zshrc and prompt functions run BEFORE profile.common.
+  # Provide harmless read-only system utilities so they don't error.
+  _sfx_preboot="${FLOX_ENV_CACHE}/sandflox/preboot"
+  mkdir -p "$_sfx_preboot"
+  for _sfx_cmd in locale colrm; do
+    [ -x "/usr/bin/$_sfx_cmd" ] && ln -sf "/usr/bin/$_sfx_cmd" "$_sfx_preboot/$_sfx_cmd"
+  done
+  export PATH="$FLOX_ENV/bin:$_sfx_preboot"
+
   # ── Layer 4: Breadcrumb cleanup ─────────────────────────
   unset FLOX_ENV_PROJECT FLOX_ENV_DIRS FLOX_PATH_PATCHED
+  unset _sfx_policy _sfx_preboot _sfx_cmd
 """
 
 # ── Profile: common ─────────────────────────────────────
