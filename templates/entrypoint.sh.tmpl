@@ -32,6 +32,14 @@ if [ -f "$_sfx_req" ]; then
     _sfx_count=$((_sfx_count + 1))
   fi
 
+  # Shell startup deps: harmless read-only system utilities that
+  # /etc/zshrc and prompt functions expect (macOS-specific)
+  for _sfx_sys in locale colrm; do
+    if [ ! -e "${_sfx_bin}/$_sfx_sys" ] && [ -x "/usr/bin/$_sfx_sys" ]; then
+      "${FLOX_ENV}/bin/ln" -sf "/usr/bin/$_sfx_sys" "${_sfx_bin}/$_sfx_sys"
+    fi
+  done
+
   # SHELL-07: remove curl from bin when network is blocked
   if [ -f "${FLOX_ENV_CACHE}/sandflox/net-blocked.flag" ]; then
     if [ -L "${_sfx_bin}/curl" ]; then
