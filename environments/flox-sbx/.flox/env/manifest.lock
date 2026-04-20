@@ -910,17 +910,17 @@
     {
       "attr_path": "sandflox",
       "broken": false,
-      "derivation": "/nix/store/63gjwbsh85mhbjq4m3ix78sha05d4b42-sandflox-0.1.0.drv",
+      "derivation": "/nix/store/sqs790rhxkcnhcqyfzw9m1m1jxfyn832-sandflox-0.1.0.drv",
       "description": "macOS-native sandbox for AI coding agents",
       "install_id": "sandflox",
       "license": "MIT",
-      "locked_url": "https://github.com/8BitTacoSupreme/sandflox.git?rev=60fbdcc6c39ccd92ac93f99d38a6526c94b542a3",
+      "locked_url": "https://github.com/8BitTacoSupreme/sandflox.git?rev=ed4530263a59a138c98f705832fcf024cc28803c",
       "name": "sandflox-0.1.0",
       "pname": "sandflox",
-      "rev": "60fbdcc6c39ccd92ac93f99d38a6526c94b542a3",
-      "rev_count": 119,
-      "rev_date": "2026-04-20T00:55:38Z",
-      "scrape_date": "2026-04-20T00:55:58.831250Z",
+      "rev": "ed4530263a59a138c98f705832fcf024cc28803c",
+      "rev_count": 123,
+      "rev_date": "2026-04-20T01:03:43Z",
+      "scrape_date": "2026-04-20T01:04:05.758242Z",
       "stabilities": [
         "unstable"
       ],
@@ -930,7 +930,7 @@
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/map2mc9n37bnh8afhqm96hbaxfh7wjak-sandflox-0.1.0"
+        "out": "/nix/store/68j8b294sql4d3ph5wjfq01xf1n576pd-sandflox-0.1.0"
       },
       "system": "aarch64-darwin",
       "group": "sandflox",
