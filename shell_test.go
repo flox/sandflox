@@ -49,7 +49,7 @@ func TestGenerateEntrypoint_ArmorFunctions(t *testing.T) {
 
 	// Each armored command has a function definition
 	for _, name := range ArmoredCommands {
-		assertContains(t, out, "unalias "+name+" 2>/dev/null; "+name+"() { _sandflox_blocked "+name+"; }")
+		assertContains(t, out, "function "+name+" { _sandflox_blocked "+name+"; }")
 	}
 
 	// Helper function body

@@ -58,7 +58,7 @@ _sandflox_blocked() {
   return 126
 }
 
-{{range .ArmoredCommands}}unalias {{.}} 2>/dev/null; {{.}}() { _sandflox_blocked {{.}}; }
+{{range .ArmoredCommands}}function {{.}} { _sandflox_blocked {{.}}; }
 {{end}}
 export -f _sandflox_blocked {{range .ArmoredCommands}}{{.}} {{end}}
 
