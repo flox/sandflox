@@ -151,7 +151,7 @@ common = """
     function uv { _sandflox_blocked uv; }
     function docker { _sandflox_blocked docker; }
     function podman { _sandflox_blocked podman; }
-    export -f _sandflox_blocked flox nix nix-env nix-store nix-shell nix-build apt apt-get yum dnf brew snap flatpak pip pip3 npm npx yarn pnpm cargo go gem composer uv docker podman
+    [ -n "${BASH_VERSION:-}" ] && export -f _sandflox_blocked flox nix nix-env nix-store nix-shell nix-build apt apt-get yum dnf brew snap flatpak pip pip3 npm npx yarn pnpm cargo go gem composer uv docker podman
 
     # Python safety flags
     export PYTHON_NOPIP=1

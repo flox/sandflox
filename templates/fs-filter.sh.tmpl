@@ -30,7 +30,7 @@ _sfx_check_write_target() {
 {{range .ReadOnly}}  case "$resolved" in {{. | trimslash | shellquote}}|{{. | trimslash | shellquote}}/*) echo "[sandflox] BLOCKED: \"$target\" is read-only by policy" >&2; return 126;; esac
 {{end}}{{end}}  return 0
 }
-export -f _sfx_check_write_target
+[ -n "${BASH_VERSION:-}" ] && export -f _sfx_check_write_target
 
 # ── Write-command wrappers ───────────────────────────────
 
@@ -40,6 +40,6 @@ function {{.}} {
   _sfx_check_write_target "$_last_arg" || return 126
   "$_sfx_real_{{.}}" "$@"
 }
-export -f {{.}}
+[ -n "${BASH_VERSION:-}" ] && export -f {{.}}
 
 {{end}}{{end}}

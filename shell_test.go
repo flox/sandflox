@@ -56,8 +56,8 @@ func TestGenerateEntrypoint_ArmorFunctions(t *testing.T) {
 	assertContains(t, out, `[sandflox] BLOCKED: $1 is not available. Environment is immutable.`)
 	assertContains(t, out, `return 126`)
 
-	// Single export -f statement with _sandflox_blocked + all 26 names
-	assertContains(t, out, "export -f _sandflox_blocked")
+	// Single export -f statement with _sandflox_blocked + all 26 names, guarded by BASH_VERSION check
+	assertContains(t, out, `[ -n "${BASH_VERSION:-}" ] && export -f _sandflox_blocked`)
 
 	// Verify all 26 names appear after "export -f _sandflox_blocked"
 	exportIdx := strings.Index(out, "export -f _sandflox_blocked")
@@ -159,7 +159,7 @@ func TestGenerateFsFilter_Wrappers(t *testing.T) {
 	for _, cmd := range WriteCmds {
 		assertContains(t, out, `export _sfx_real_`+cmd+`="$(command -v `+cmd+` 2>/dev/null)"`)
 		assertContains(t, out, "function "+cmd+" {")
-		assertContains(t, out, "export -f "+cmd)
+		assertContains(t, out, `[ -n "${BASH_VERSION:-}" ] && export -f `+cmd)
 	}
 
 	// Improved prefix matching: dual alternatives (exact + subpath)
