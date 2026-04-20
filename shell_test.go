@@ -158,7 +158,7 @@ func TestGenerateFsFilter_Wrappers(t *testing.T) {
 	// Each write command gets a wrapper
 	for _, cmd := range WriteCmds {
 		assertContains(t, out, `export _sfx_real_`+cmd+`="$(command -v `+cmd+` 2>/dev/null)"`)
-		assertContains(t, out, cmd+"() {")
+		assertContains(t, out, "function "+cmd+" {")
 		assertContains(t, out, "export -f "+cmd)
 	}
 

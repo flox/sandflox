@@ -35,7 +35,7 @@ export -f _sfx_check_write_target
 # ── Write-command wrappers ───────────────────────────────
 
 {{range .WriteCmds}}export _sfx_real_{{.}}="$(command -v {{.}} 2>/dev/null)"
-{{.}}() {
+function {{.}} {
   local _last_arg="${!#}"
   _sfx_check_write_target "$_last_arg" || return 126
   "$_sfx_real_{{.}}" "$@"
