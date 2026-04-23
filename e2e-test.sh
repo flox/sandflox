@@ -3,8 +3,8 @@
 # ─────────────────────────────────────────────────────────────────
 # Exercises all 28 TESTPLAN scenarios against published FloxHub packages.
 # Two sections:
-#   A) FloxHub binary tests (1-12): install 8BitTacoSupreme/sandflox
-#   B) flox-sbx consumer tests (13-28): pull 8BitTacoSupreme/flox-sbx
+#   A) FloxHub binary tests (1-12): install flox/sandflox
+#   B) flox-sbx consumer tests (13-28): pull flox/flox-sbx
 #
 # Usage:
 #   bash e2e-test.sh 2>&1 | tee e2e-results.txt
@@ -99,7 +99,7 @@ else
   # Install sandflox + supporting packages
   echo "  Installing sandflox + supporting packages from FloxHub..."
   if flox install -d "$_sfx_binary_dir" \
-    8BitTacoSupreme/sandflox \
+    flox/sandflox \
     bash coreutils python3 jq curl git \
     gnugrep gnused gawk findutils diffutils file 2>&1; then
     echo "  FloxHub packages installed."
@@ -448,8 +448,8 @@ _sfx_consumer_ok=0
 echo "── Setup: pulling flox-sbx consumer environment ──────"
 mkdir -p "$_sfx_consumer_dir"
 
-if flox pull -d "$_sfx_consumer_dir" 8BitTacoSupreme/flox-sbx 2>&1; then
-  echo "  Pulled 8BitTacoSupreme/flox-sbx."
+if flox pull -d "$_sfx_consumer_dir" flox/flox-sbx 2>&1; then
+  echo "  Pulled flox/flox-sbx."
   _sfx_consumer_ok=1
 else
   echo "  ERROR: flox pull failed."
@@ -958,7 +958,7 @@ _sfx_degrade_dir="/tmp/sfx-e2e-degrade-$$"
 mkdir -p "$_sfx_degrade_dir"
 _sfx_degrade_ok=0
 
-if flox pull -d "$_sfx_degrade_dir" 8BitTacoSupreme/flox-sbx 2>&1 | tail -1; then
+if flox pull -d "$_sfx_degrade_dir" flox/flox-sbx 2>&1 | tail -1; then
   _sfx_degrade_ok=1
 fi
 

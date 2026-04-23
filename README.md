@@ -21,8 +21,8 @@ sandflox ships as two complementary Flox artifacts:
 
 | Artifact | What it is | Install |
 |----------|-----------|---------|
-| `8BitTacoSupreme/sandflox` | Go binary (FloxHub package) | `flox install 8BitTacoSupreme/sandflox` |
-| `8BitTacoSupreme/flox-sbx` | Hardened Flox environment (FloxHub environment) | `flox pull 8BitTacoSupreme/flox-sbx` |
+| `flox/sandflox` | Go binary (FloxHub package) | `flox install flox/sandflox` |
+| `flox/flox-sbx` | Hardened Flox environment (FloxHub environment) | `flox pull flox/flox-sbx` |
 
 **The binary** provides CLI commands (`sandflox`, `sandflox validate`, `sandflox elevate`, etc.) and generates enforcement artifacts. **The environment** wires everything together — `flox activate` gives you shell enforcement out of the box, and `sandflox elevate` adds kernel enforcement on top.
 
@@ -32,7 +32,7 @@ sandflox ships as two complementary Flox artifacts:
 
 ```bash
 # Pull the pre-configured sandbox environment
-flox pull 8BitTacoSupreme/flox-sbx
+flox pull flox/flox-sbx
 
 # Activate — shell enforcement is immediate
 flox activate

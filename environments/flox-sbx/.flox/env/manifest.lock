@@ -63,7 +63,7 @@
         "pkg-group": "python3"
       },
       "sandflox": {
-        "pkg-path": "8BitTacoSupreme/sandflox",
+        "pkg-path": "flox/sandflox",
         "pkg-group": "sandflox",
         "systems": [
           "aarch64-darwin"
@@ -914,13 +914,13 @@
       "description": "macOS-native sandbox for AI coding agents",
       "install_id": "sandflox",
       "license": "MIT",
-      "locked_url": "https://github.com/8BitTacoSupreme/sandflox.git?rev=de57ae64a2d06ce67e9287180adaaa9f3fb0d13d",
+      "locked_url": "https://github.com/flox/sandflox.git?rev=a683528f4b68088a2adbe5f7eda1d3ab56d5fe1f",
       "name": "sandflox-0.1.0",
       "pname": "sandflox",
-      "rev": "de57ae64a2d06ce67e9287180adaaa9f3fb0d13d",
-      "rev_count": 126,
-      "rev_date": "2026-04-20T18:43:49Z",
-      "scrape_date": "2026-04-20T18:44:11.253667Z",
+      "rev": "a683528f4b68088a2adbe5f7eda1d3ab56d5fe1f",
+      "rev_count": 130,
+      "rev_date": "2026-04-23T15:46:29Z",
+      "scrape_date": "2026-04-23T15:46:43.731478Z",
       "stabilities": [
         "unstable"
       ],

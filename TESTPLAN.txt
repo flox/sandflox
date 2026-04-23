@@ -15,7 +15,7 @@ sandflox v1.0 — Manual Test Plan
   1. Install from FloxHub
 
   cd /tmp && mkdir sfx-test && cd sfx-test && flox init
-  flox install 8BitTacoSupreme/sandflox
+  flox install flox/sandflox
   flox activate -- command -v sandflox  # expect: /nix/store/... path
 
   2. Validate (CMD-01)
@@ -129,8 +129,8 @@ sandflox v1.0 — Manual Test Plan
   Setup (flox-sbx)
 
   mkdir /tmp/sfx-consumer-test && cd /tmp/sfx-consumer-test
-  flox pull 8BitTacoSupreme/flox-sbx
-  # expect: "Pulled 8BitTacoSupreme/flox-sbx from https://hub.flox.dev/"
+  flox pull flox/flox-sbx
+  # expect: "Pulled flox/flox-sbx from https://hub.flox.dev/"
 
   ── Tier 1: Shell-Level (Default Posture) ─────────────────
 
@@ -280,7 +280,7 @@ sandflox v1.0 — Manual Test Plan
   # This test is now the DEFAULT consumer flow. flox-sbx uses the embedded
   # default policy when no policy.toml exists on disk.
   mkdir /tmp/sfx-degrade-test && cd /tmp/sfx-degrade-test
-  flox pull 8BitTacoSupreme/flox-sbx
+  flox pull flox/flox-sbx
   flox activate
   # expect: "[sandflox] WARNING: no policy.toml -- using embedded default"
   # expect: "[sandflox] Prepared: 57 tools | default | net:blocked fs:workspace"
@@ -313,7 +313,7 @@ sandflox v1.0 — Manual Test Plan
 
   TODO (flox-sbx)
 
-  [x] Verify FloxHub package syntax: sandflox.pkg-path = "8BitTacoSupreme/sandflox"
+  [x] Verify FloxHub package syntax: sandflox.pkg-path = "flox/sandflox"
       Verified: works with flox install against Flox 1.10+
   [x] Update .flox/pkgs/sandflox.nix fileset to include requisites*.txt and
       policy.toml for //go:embed (commit 164fb66)
