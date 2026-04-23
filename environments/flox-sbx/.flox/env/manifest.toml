@@ -25,7 +25,7 @@ systems = ["aarch64-darwin", "x86_64-darwin"]
 
 # ── Packages ─────────────────────────────────────────────
 [install]
-sandflox.pkg-path = "8BitTacoSupreme/sandflox"
+sandflox.pkg-path = "flox/sandflox"
 sandflox.pkg-group = "sandflox"
 sandflox.systems = ["aarch64-darwin"]
 
